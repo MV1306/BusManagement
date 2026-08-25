@@ -39,6 +39,59 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// ── New Stop Modal ───────────────────────────────────────────────────────
+
+interface NewStopModalProps {
+  newStop: typeof emptyNewStop;
+  setNewStop: React.Dispatch<React.SetStateAction<typeof emptyNewStop>>;
+  onSubmit: (e: React.FormEvent) => void;
+  onClose: () => void;
+}
+
+function NewStopModal({ newStop, setNewStop, onSubmit, onClose }: NewStopModalProps) {
+  return (
+    <div className="confirm-backdrop" onClick={onClose}>
+      <div className="confirm-dialog" style={{ minWidth: 480, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 20, color: 'var(--text)' }}>Create New Stop</div>
+        <form onSubmit={onSubmit}>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Stop Name *</label>
+              <input value={newStop.stopName} onChange={e => {
+                const name = e.target.value.toUpperCase();
+                setNewStop(s => ({
+                  ...s,
+                  stopName: name,
+                  shortName: name,
+                  stopCode: name.length >= 3 ? generateStopCode(name) : s.stopCode,
+                }));
+              }} required maxLength={100} style={{ textTransform: 'uppercase' }} autoFocus />
+            </div>
+            <div className="form-group">
+              <label>Stop Code</label>
+              <input value={newStop.stopCode} readOnly style={{ cursor: 'default' }} />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Short Name</label>
+              <input value={newStop.shortName} onChange={e => setNewStop(s => ({ ...s, shortName: e.target.value.toUpperCase() }))} maxLength={50} style={{ textTransform: 'uppercase' }} />
+            </div>
+            <div className="form-group">
+              <label>Lat, Lng</label>
+              <input value={newStop.latLng} onChange={e => setNewStop(s => ({ ...s, latLng: e.target.value }))} placeholder="13.0827, 80.2707" />
+            </div>
+          </div>
+          <div className="confirm-actions">
+            <button type="button" className="btn btn-subtle" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn btn-primary">Create &amp; Select</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ── Timeline component ────────────────────────────────────────────────────
 
 function RouteTimeline({ stops, stages }: { stops: RouteStop[]; stages: RouteStage[] }) {
@@ -699,8 +752,8 @@ export default function Routes() {
                             <div style={{ flex: 1 }}>
                               <StopAutocomplete stops={availableStops} value={addStopId} onChange={onAddStopSelect} placeholder="Search and select stop…" required />
                             </div>
-                            <button type="button" className="btn btn-subtle btn-sm" onClick={() => setShowNewStop(v => !v)}>
-                              {showNewStop ? '✕' : '+ New'}
+                            <button type="button" className="btn btn-subtle btn-sm" onClick={() => { setShowNewStop(true); setNewStop(emptyNewStop); }}>
+                              + New Stop
                             </button>
                           </div>
                         </div>
@@ -728,38 +781,12 @@ export default function Routes() {
                     </form>
 
                     {showNewStop && (
-                      <div className="inline-panel">
-                        <div className="inline-panel-title">Create New Stop</div>
-                        <form onSubmit={handleCreateStop}>
-                          <div className="form-row">
-                            <div className="form-group">
-                              <label>Stop Name *</label>
-                              <input value={newStop.stopName} onChange={e => {
-                                const name = e.target.value.toUpperCase();
-                                setNewStop(s => ({
-                                  ...s,
-                                  stopName: name,
-                                  shortName: name,
-                                  stopCode: name.length >= 3 ? generateStopCode(name) : s.stopCode,
-                                }));
-                              }} required maxLength={100} style={{ textTransform: 'uppercase' }} />
-                            </div>
-                            <div className="form-group">
-                              <label>Stop Code</label>
-                              <input value={newStop.stopCode} readOnly style={{ background: 'var(--bg-subtle, #f5f5f5)', cursor: 'default' }} />
-                            </div>
-                            <div className="form-group">
-                              <label>Short Name</label>
-                              <input value={newStop.shortName} onChange={e => setNewStop(s => ({ ...s, shortName: e.target.value.toUpperCase() }))} maxLength={50} style={{ textTransform: 'uppercase' }} />
-                            </div>
-                            <div className="form-group">
-                              <label>Lat, Lng *</label>
-                              <input value={newStop.latLng} onChange={e => setNewStop(s => ({ ...s, latLng: e.target.value }))} placeholder="13.0827, 80.2707" required />
-                            </div>
-                          </div>
-                          <button type="submit" className="btn btn-primary btn-sm">Create &amp; Select</button>
-                        </form>
-                      </div>
+                      <NewStopModal
+                        newStop={newStop}
+                        setNewStop={setNewStop}
+                        onSubmit={handleCreateStop}
+                        onClose={() => { setShowNewStop(false); setNewStop(emptyNewStop); }}
+                      />
                     )}
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
