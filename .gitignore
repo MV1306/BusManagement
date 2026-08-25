@@ -1,0 +1,36 @@
+# ========================
+# .NET API
+# ========================
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+publish/
+*.nupkg
+*.snupkg
+appsettings.Development.json
+
+# ========================
+# React / Vite UI
+# ========================
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# ========================
+# Logs
+# ========================
+logs/
+*.log
+npm-debug.log*
+
+# ========================
+# OS / Editor
+# ========================
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
