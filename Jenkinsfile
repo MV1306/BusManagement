@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-        NODE_ENV                    = 'production'
+        NODE_ENV                    = 'development'
 
         API_APPPOOL     = 'MTCBusAPI'
         UI_APPPOOL      = 'BusManagementUI'
