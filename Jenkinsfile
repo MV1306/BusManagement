@@ -55,7 +55,7 @@ pipeline {
         stage('UI - Build') {
             steps {
                 dir('BusManagement.UI') {
-                    bat '.\node_modules\.bin\tsc -b && .\node_modules\.bin\vite build'
+                    bat 'cmd /c "node_modules\.bin\tsc -b && node_modules\.bin\vite build"'
                 }
             }
         }
