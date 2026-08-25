@@ -11,4 +11,5 @@ public class RouteStage
 
     public Route Route { get; set; } = null!;
     public ICollection<RouteStop> RouteStops { get; set; } = [];
+    public ICollection<StageTranslation> Translations { get; set; } = [];
 }

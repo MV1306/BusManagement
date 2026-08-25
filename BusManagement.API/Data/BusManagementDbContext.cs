@@ -11,6 +11,8 @@ public class BusManagementDbContext(DbContextOptions<BusManagementDbContext> opt
     public DbSet<RouteStop> RouteStops => Set<RouteStop>();
     public DbSet<Fare> Fares => Set<Fare>();
     public DbSet<FareAuditLog> FareAuditLogs => Set<FareAuditLog>();
+    public DbSet<StopTranslation> StopTranslations => Set<StopTranslation>();
+    public DbSet<StageTranslation> StageTranslations => Set<StageTranslation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -64,6 +66,24 @@ public class BusManagementDbContext(DbContextOptions<BusManagementDbContext> opt
             e.Property(a => a.NewAmount).HasPrecision(10, 2);
             e.Property(a => a.Action).HasMaxLength(10);
             e.Property(a => a.ChangedBy).HasMaxLength(100);
+        });
+        modelBuilder.Entity<StopTranslation>(e =>
+        {
+            e.HasKey(t => t.StopTranslationId);
+            e.HasIndex(t => new { t.StopId, t.LanguageCode }).IsUnique();
+            e.Property(t => t.LanguageCode).HasMaxLength(10).IsRequired();
+            e.Property(t => t.TranslatedName).HasMaxLength(100).IsRequired();
+            e.Property(t => t.TranslatedShortName).HasMaxLength(50);
+            e.HasOne(t => t.Stop).WithMany(s => s.Translations).HasForeignKey(t => t.StopId);
+        });
+
+        modelBuilder.Entity<StageTranslation>(e =>
+        {
+            e.HasKey(t => t.StageTranslationId);
+            e.HasIndex(t => new { t.RouteStageId, t.LanguageCode }).IsUnique();
+            e.Property(t => t.LanguageCode).HasMaxLength(10).IsRequired();
+            e.Property(t => t.TranslatedName).HasMaxLength(100).IsRequired();
+            e.HasOne(t => t.RouteStage).WithMany(s => s.Translations).HasForeignKey(t => t.RouteStageId);
         });
     }
 }

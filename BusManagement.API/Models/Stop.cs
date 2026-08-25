@@ -15,4 +15,5 @@ public class Stop
     public DateTime? ModifiedDate { get; set; }
 
     public ICollection<RouteStop> RouteStops { get; set; } = [];
+    public ICollection<StopTranslation> Translations { get; set; } = [];
 }
