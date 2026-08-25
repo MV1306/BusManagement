@@ -55,7 +55,7 @@ pipeline {
         stage('UI - Build') {
             steps {
                 dir('BusManagement.UI') {
-                    bat 'cmd /c "node_modules\.bin\tsc -b && node_modules\.bin\vite build"'
+                    bat 'npx tsc -b && npx vite build'
                 }
             }
         }
@@ -78,6 +78,7 @@ pipeline {
                         """
                     }
                 }
+
                 stage('Deploy UI') {
                     steps {
                         bat """
@@ -95,9 +96,11 @@ pipeline {
         success {
             echo 'Pipeline completed successfully.'
         }
+
         failure {
             echo 'Pipeline failed. Check the logs above.'
         }
+
         always {
             cleanWs()
         }
