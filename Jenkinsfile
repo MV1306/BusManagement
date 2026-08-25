@@ -5,8 +5,8 @@ pipeline {
         DOTNET_CLI_TELEMETRY_OPTOUT = '1'
         NODE_ENV                    = 'development'
 
-        API_APPPOOL     = 'MTCBusAPI'
-        UI_APPPOOL      = 'BusManagementUI'
+        API_APPPOOL     = 'TransitOpsAPI'
+        UI_APPPOOL      = 'TransitOpsUI'
         API_DEPLOY_PATH = 'C:\\inetpub\\wwwroot\\BusManagementAPI'
         UI_DEPLOY_PATH  = 'C:\\inetpub\\wwwroot\\BusManagementUI'
     }
