@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -49,7 +50,7 @@ interface NewStopModalProps {
 }
 
 function NewStopModal({ newStop, setNewStop, onSubmit, onClose }: NewStopModalProps) {
-  return (
+  return createPortal(
     <div className="confirm-backdrop" onClick={onClose}>
       <div className="confirm-dialog" style={{ minWidth: 480, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
         <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 20, color: 'var(--text)' }}>Create New Stop</div>
@@ -88,7 +89,8 @@ function NewStopModal({ newStop, setNewStop, onSubmit, onClose }: NewStopModalPr
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
