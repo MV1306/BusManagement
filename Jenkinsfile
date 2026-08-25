@@ -12,12 +12,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
         stage('API - Restore') {
             steps {
                 dir('BusManagement.API') {
@@ -61,7 +55,7 @@ pipeline {
         stage('UI - Build') {
             steps {
                 dir('BusManagement.UI') {
-                    bat 'npm run build'
+                    bat 'npx tsc -b && npx vite build'
                 }
             }
         }
