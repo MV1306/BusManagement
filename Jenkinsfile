@@ -5,11 +5,8 @@ pipeline {
         DOTNET_CLI_TELEMETRY_OPTOUT = '1'
         NODE_ENV                    = 'production'
 
-        // IIS App Pool names
-        API_APPPOOL  = 'MTCBusAPI'
-        UI_APPPOOL   = 'BusManagementUI'
-
-        // IIS deploy paths
+        API_APPPOOL     = 'MTCBusAPI'
+        UI_APPPOOL      = 'BusManagementUI'
         API_DEPLOY_PATH = 'C:\\inetpub\\wwwroot\\BusManagementAPI'
         UI_DEPLOY_PATH  = 'C:\\inetpub\\wwwroot\\BusManagementUI'
     }
@@ -21,58 +18,50 @@ pipeline {
             }
         }
 
-        stage('Build & Test') {
-            parallel {
-                stage('API') {
-                    stages {
-                        stage('API - Restore') {
-                            steps {
-                                dir('BusManagement.API') {
-                                    bat 'dotnet restore'
-                                }
-                            }
-                        }
-                        stage('API - Build') {
-                            steps {
-                                dir('BusManagement.API') {
-                                    bat 'dotnet build --no-restore -c Release'
-                                }
-                            }
-                        }
-                        stage('API - Publish') {
-                            steps {
-                                dir('BusManagement.API') {
-                                    bat 'dotnet publish --no-build -c Release -o ../publish/api'
-                                }
-                            }
-                        }
-                    }
+        stage('API - Restore') {
+            steps {
+                dir('BusManagement.API') {
+                    bat 'dotnet restore'
                 }
+            }
+        }
 
-                stage('UI') {
-                    stages {
-                        stage('UI - Install') {
-                            steps {
-                                dir('BusManagement.UI') {
-                                    bat 'npm ci'
-                                }
-                            }
-                        }
-                        stage('UI - Lint') {
-                            steps {
-                                dir('BusManagement.UI') {
-                                    bat 'npx oxlint'
-                                }
-                            }
-                        }
-                        stage('UI - Build') {
-                            steps {
-                                dir('BusManagement.UI') {
-                                    bat 'npm run build'
-                                }
-                            }
-                        }
-                    }
+        stage('API - Build') {
+            steps {
+                dir('BusManagement.API') {
+                    bat 'dotnet build --no-restore -c Release'
+                }
+            }
+        }
+
+        stage('API - Publish') {
+            steps {
+                dir('BusManagement.API') {
+                    bat 'dotnet publish --no-build -c Release -o ../publish/api'
+                }
+            }
+        }
+
+        stage('UI - Install') {
+            steps {
+                dir('BusManagement.UI') {
+                    bat 'npm ci'
+                }
+            }
+        }
+
+        stage('UI - Lint') {
+            steps {
+                dir('BusManagement.UI') {
+                    bat 'npx oxlint'
+                }
+            }
+        }
+
+        stage('UI - Build') {
+            steps {
+                dir('BusManagement.UI') {
+                    bat 'npm run build'
                 }
             }
         }
