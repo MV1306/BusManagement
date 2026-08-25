@@ -792,8 +792,8 @@ export default function Routes() {
                     )}
 
                     <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
-                        <button type="button" className="btn btn-subtle btn-sm" onClick={handleFixDistances}>⟳ Fix Distances</button>
-                      </div>
+                      <button type="button" className="btn btn-subtle btn-sm" onClick={handleFixDistances}>⟳ Fix Distances</button>
+                    </div>
                     <div className="table-wrap mt-16" ref={tableWrapRef} style={{ maxHeight: 400, overflowY: 'auto' }}>
                       <table>
                         <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}><tr><th style={{ width: 24 }}></th><th>Order</th><th>Stop</th><th>Stage</th><th>Dist from prev</th><th>Flag</th><th></th></tr></thead>
@@ -842,7 +842,7 @@ export default function Routes() {
       <div className="card">
         <div className="card-header">
           <div>
-            <div className="card-title">All Routes</div>
+            <div className="card-title">All Routes Test</div>
             <div className="text-muted" style={{ marginTop: 2 }}>{totalRoutes} routes</div>
           </div>
           <div className="flex-gap">
