@@ -61,7 +61,7 @@ pipeline {
                         stage('UI - Lint') {
                             steps {
                                 dir('BusManagement.UI') {
-                                    bat 'npm run lint'
+                                    bat 'npx oxlint'
                                 }
                             }
                         }
