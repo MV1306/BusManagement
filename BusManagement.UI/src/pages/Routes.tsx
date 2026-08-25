@@ -842,7 +842,7 @@ export default function Routes() {
       <div className="card">
         <div className="card-header">
           <div>
-            <div className="card-title">All Routes Test</div>
+            <div className="card-title">All Routes</div>
             <div className="text-muted" style={{ marginTop: 2 }}>{totalRoutes} routes</div>
           </div>
           <div className="flex-gap">
