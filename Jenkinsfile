@@ -7,8 +7,8 @@ pipeline {
 
         API_APPPOOL     = 'TransitOpsAPI'
         UI_APPPOOL      = 'TransitOpsUI'
-        API_DEPLOY_PATH = 'C:\\inetpub\\wwwroot\\BusManagementAPI'
-        UI_DEPLOY_PATH  = 'C:\\inetpub\\wwwroot\\BusManagementUI'
+        API_DEPLOY_PATH = 'C:\\inetpub\\wwwroot\\TransitOpsAPI'
+        UI_DEPLOY_PATH  = 'C:\\inetpub\\wwwroot\\TransitOpsUI'
     }
 
     stages {

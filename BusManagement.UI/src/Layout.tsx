@@ -43,7 +43,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('nav-collapsed') === '1');
   const base = '/' + pathname.split('/')[1];
-  const page = titles[base] ?? { label: 'Bus Management', icon: <BusIcon /> };
+  const page = titles[base] ?? { label: 'TransitOps', icon: <BusIcon /> };
 
   useKeyboardShortcuts();
 
@@ -60,7 +60,7 @@ export default function Layout() {
         <div className="sidebar-brand">
           <div className="sidebar-brand-icon"><BusIcon /></div>
           {!collapsed && <div style={{ flex: 1 }}>
-            <div className="sidebar-brand-text">BusManagement</div>
+            <div className="sidebar-brand-text">TransitOps</div>
             <div className="sidebar-brand-sub">MTC · Chennai</div>
           </div>}
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close menu">✕</button>
