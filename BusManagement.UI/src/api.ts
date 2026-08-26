@@ -324,6 +324,31 @@ export const faresApi = {
     req<SmartFareResult>(`/fares/calculate-smart?fromStopId=${fromStopId}&toStopId=${toStopId}&busType=${busType}&criteria=${criteria}`),
 };
 
+// ── Translations ─────────────────────────────────────────────────────────
+
+export interface StopTranslation {
+  stopId: number;
+  originalName: string;
+  originalShortName?: string | null;
+  translatedName?: string | null;
+  translatedShortName?: string | null;
+}
+
+export interface StageTranslation {
+  routeStageId: number;
+  originalName: string;
+  translatedName?: string | null;
+}
+
+export const translationApi = {
+  getStop: (id: number) => req<StopTranslation>(`/translation/stops/${id}`),
+  saveStop: (id: number, translatedName: string, translatedShortName?: string) =>
+    req<StopTranslation>(`/translation/stops/${id}`, { method: 'POST', body: JSON.stringify({ translatedName, translatedShortName }) }),
+  getStage: (id: number) => req<StageTranslation>(`/translation/stages/${id}`),
+  saveStage: (id: number, translatedName: string) =>
+    req<StageTranslation>(`/translation/stages/${id}`, { method: 'POST', body: JSON.stringify({ translatedName }) }),
+};
+
 // ── Export ────────────────────────────────────────────────────────────────
 
 export const exportApi = {

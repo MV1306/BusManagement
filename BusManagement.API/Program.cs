@@ -38,6 +38,7 @@ builder.Services.AddScoped<FareCalculationService>();
 builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<GtfsExportService>();
+builder.Services.AddSingleton<TamilTransliterationService>();
 
 builder.Services
     .AddControllers()

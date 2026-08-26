@@ -12,6 +12,7 @@ import CoverageMap from './pages/CoverageMap';
 import RouteCard from './pages/RouteCard';
 import FareAudit from './pages/FareAudit';
 import ExportPage from './pages/ExportPage';
+import Translations from './pages/Translations';
 
 export default function App() {
   return (
@@ -30,7 +31,8 @@ export default function App() {
           <Route path="coverage"   element={<CoverageMap />} />
           <Route path="routecard"  element={<RouteCard />} />
           <Route path="audit"      element={<FareAudit />} />
-          <Route path="export"     element={<ExportPage />} />
+          <Route path="export"       element={<ExportPage />} />
+          <Route path="translations" element={<Translations />} />
         </Route>
       </Routes>
     </BrowserRouter>
