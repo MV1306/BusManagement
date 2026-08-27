@@ -18,9 +18,9 @@ const navItems = [
   { section: 'Maps & Reports' },
   { to: '/coverage',   icon: <MapIcon />,    label: 'Coverage Map',    key: '9' },
   { to: '/routecard',  icon: <CardIcon />,   label: 'Route Card',      key: '0' },
-  { to: '/audit',      icon: <AuditIcon />,  label: 'Fare Audit',      key: '' },
-  { to: '/export',        icon: <ExportIcon />, label: 'Export',           key: '' },
-  { to: '/translations',  icon: <LangIcon />,   label: 'Translations',     key: '' },
+  { to: '/audit',      icon: <AuditIcon />,  label: 'Fare Audit',      key: 'A' },
+  { to: '/export',        icon: <ExportIcon />, label: 'Export',           key: 'E' },
+  { to: '/translations',  icon: <LangIcon />,   label: 'Translations',     key: 'T' },
 ];
 
 const titles: Record<string, { label: string; icon: React.ReactNode }> = {

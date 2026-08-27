@@ -10,7 +10,7 @@ namespace BusManagement.API.Controllers;
 [Route("api/[controller]")]
 public class TranslationController(
     BusManagementDbContext db,
-    TamilTransliterationService transliterator) : ControllerBase
+    ITranslationProvider translator) : ControllerBase
 {
     private const string LangCode = "ta";
 
@@ -28,15 +28,19 @@ public class TranslationController(
         if (untranslated.Count == 0)
             return Ok(new { translated = 0, message = "All stops already have Tamil translations." });
 
-        var translations = untranslated.Select(s => new StopTranslation
+        var translations = new List<StopTranslation>();
+        foreach (var s in untranslated)
         {
-            StopId = s.StopId,
-            LanguageCode = LangCode,
-            TranslatedName = transliterator.TransliteratePhrase(s.StopName),
-            TranslatedShortName = s.ShortName is not null
-                ? transliterator.TransliteratePhrase(s.ShortName)
-                : null,
-        }).ToList();
+            translations.Add(new StopTranslation
+            {
+                StopId = s.StopId,
+                LanguageCode = LangCode,
+                TranslatedName = await translator.TranslateAsync(s.StopName, LangCode),
+                TranslatedShortName = s.ShortName is not null
+                    ? await translator.TranslateAsync(s.ShortName, LangCode)
+                    : null,
+            });
+        }
 
         db.StopTranslations.AddRange(translations);
         await db.SaveChangesAsync();
@@ -64,11 +68,11 @@ public class TranslationController(
 
         var translatedName = body?.TranslatedName is { Length: > 0 } custom
             ? custom
-            : transliterator.TransliteratePhrase(stop.StopName);
+            : await translator.TranslateAsync(stop.StopName, LangCode);
 
         var translatedShortName = body?.TranslatedShortName is { Length: > 0 } customShort
             ? customShort
-            : stop.ShortName is not null ? transliterator.TransliteratePhrase(stop.ShortName) : null;
+            : stop.ShortName is not null ? await translator.TranslateAsync(stop.ShortName, LangCode) : null;
 
         var existing = await db.StopTranslations
             .FirstOrDefaultAsync(t => t.StopId == id && t.LanguageCode == LangCode);
@@ -152,7 +156,7 @@ public class TranslationController(
 
         var translatedName = body?.TranslatedName is { Length: > 0 } custom
             ? custom
-            : transliterator.TransliteratePhrase(stage.StageName);
+            : await translator.TranslateAsync(stage.StageName, LangCode);
 
         var existing = await db.StageTranslations
             .FirstOrDefaultAsync(t => t.RouteStageId == id && t.LanguageCode == LangCode);
@@ -192,12 +196,16 @@ public class TranslationController(
         if (untranslated.Count == 0)
             return Ok(new { translated = 0, message = "All stages already have Tamil translations." });
 
-        var translations = untranslated.Select(s => new StageTranslation
+        var translations = new List<StageTranslation>();
+        foreach (var s in untranslated)
         {
-            RouteStageId = s.RouteStageId,
-            LanguageCode = LangCode,
-            TranslatedName = transliterator.TransliteratePhrase(s.StageName),
-        }).ToList();
+            translations.Add(new StageTranslation
+            {
+                RouteStageId = s.RouteStageId,
+                LanguageCode = LangCode,
+                TranslatedName = await translator.TranslateAsync(s.StageName, LangCode),
+            });
+        }
 
         db.StageTranslations.AddRange(translations);
         await db.SaveChangesAsync();

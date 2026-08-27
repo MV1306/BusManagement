@@ -40,6 +40,25 @@ builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<GtfsExportService>();
 builder.Services.AddSingleton<TamilTransliterationService>();
 
+// Register translation provider based on config
+var translationProvider = builder.Configuration["Translation:Provider"] ?? "Fallback";
+switch (translationProvider.ToLowerInvariant())
+{
+    case "libretranslate":
+        builder.Services.AddHttpClient<ITranslationProvider, LibreTranslateProvider>(client =>
+        {
+            var url = builder.Configuration["Translation:LibreTranslate:Url"] ?? "http://localhost:5000";
+            client.BaseAddress = new Uri(url);
+        });
+        break;
+    case "google":
+        builder.Services.AddHttpClient<ITranslationProvider, GoogleTranslateProvider>();
+        break;
+    default:
+        builder.Services.AddSingleton<ITranslationProvider, FallbackTransliterationProvider>();
+        break;
+}
+
 builder.Services
     .AddControllers()
     .AddJsonOptions(

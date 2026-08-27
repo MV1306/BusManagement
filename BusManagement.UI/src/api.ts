@@ -340,13 +340,23 @@ export interface StageTranslation {
   translatedName?: string | null;
 }
 
+export interface BulkTranslateResult {
+  translated: number;
+  message: string;
+  samples?: { stopId?: number; routeStageId?: number; translatedName: string; translatedShortName?: string }[];
+}
+
 export const translationApi = {
   getStop: (id: number) => req<StopTranslation>(`/translation/stops/${id}`),
   saveStop: (id: number, translatedName: string, translatedShortName?: string) =>
     req<StopTranslation>(`/translation/stops/${id}`, { method: 'POST', body: JSON.stringify({ translatedName, translatedShortName }) }),
+  translateAllStops: () =>
+    req<BulkTranslateResult>('/translation/stops', { method: 'POST' }),
   getStage: (id: number) => req<StageTranslation>(`/translation/stages/${id}`),
   saveStage: (id: number, translatedName: string) =>
     req<StageTranslation>(`/translation/stages/${id}`, { method: 'POST', body: JSON.stringify({ translatedName }) }),
+  translateAllStages: () =>
+    req<BulkTranslateResult>('/translation/stages', { method: 'POST' }),
 };
 
 // ── Export ────────────────────────────────────────────────────────────────
