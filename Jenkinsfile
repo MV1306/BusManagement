@@ -179,13 +179,13 @@ pipeline {
 
                             REM Create venv and install deps if not already done
                             if not exist "%VENV_PY%" (
-                                "%PY311%" -m venv "%DEPLOY%\venv"
-                                "%DEPLOY%\venv\Scripts\pip" install --no-cache-dir transformers==4.46.3 torch fastapi "uvicorn[standard]" sentencepiece sacremoses
+                                "%PY311%" -m venv "%DEPLOY%\\venv"
+                                "%DEPLOY%\\venv\\Scripts\\pip" install --no-cache-dir transformers==4.46.3 torch fastapi "uvicorn[standard]" sentencepiece sacremoses
                             )
 
                             REM Always reinstall local IndicTransToolkit (uninstall PyPI version if present)
-                            "%DEPLOY%\venv\Scripts\pip" uninstall -y indictranstoolkit >nul 2>&1
-                            "%DEPLOY%\venv\Scripts\pip" install -e "%DEPLOY%\IndicTransToolkit"
+                            "%DEPLOY%\\venv\\Scripts\\pip" uninstall -y indictranstoolkit >nul 2>&1
+                            "%DEPLOY%\\venv\\Scripts\\pip" install -e "%DEPLOY%\\IndicTransToolkit"
 
                             REM Register service fresh every deploy
                             nssm install "%SVC%" "%VENV_PY%" -m uvicorn main:app --host 127.0.0.1 --port 5100
