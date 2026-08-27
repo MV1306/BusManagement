@@ -105,8 +105,13 @@ pipeline {
                             set VENV_PY=${IT2_VENV_PYTHON}
                             set PY311=C:\\Users\\manoj\\AppData\\Local\\Programs\\Python\\Python311\\python.exe
 
-                            REM Stop service if running
-                            sc query "%SVC%" >nul 2>&1 && nssm stop "%SVC%" confirm
+                            REM Tear down any existing service regardless of state
+                            sc query "%SVC%" >nul 2>&1
+                            if not errorlevel 1 (
+                                sc stop "%SVC%" >nul 2>&1
+                                timeout /t 5 /nobreak >nul
+                                nssm remove "%SVC%" confirm
+                            )
 
                             REM Copy service files
                             if not exist "%DEPLOY%" mkdir "%DEPLOY%"
@@ -121,16 +126,13 @@ pipeline {
                                 "%DEPLOY%\\venv\\Scripts\\pip" install --no-cache-dir transformers==4.46.3 torch fastapi "uvicorn[standard]" sentencepiece sacremoses
                             )
 
-                            REM Register as Windows service via NSSM (skip if already registered)
-                            sc query "%SVC%" >nul 2>&1
-                            if errorlevel 1 (
-                                nssm install "%SVC%" "%VENV_PY%" -m uvicorn main:app --host 127.0.0.1 --port 5100
-                                nssm set "%SVC%" AppDirectory "%DEPLOY%"
-                                nssm set "%SVC%" AppEnvironmentExtra HF_HUB_ENABLE_HF_TRANSFER=1
-                                nssm set "%SVC%" Start SERVICE_AUTO_START
-                                nssm set "%SVC%" AppStdout "%DEPLOY%\\logs\\service.log"
-                                nssm set "%SVC%" AppStderr "%DEPLOY%\\logs\\service.log"
-                            )
+                            REM Register service fresh every deploy
+                            nssm install "%SVC%" "%VENV_PY%" -m uvicorn main:app --host 127.0.0.1 --port 5100
+                            nssm set "%SVC%" AppDirectory "%DEPLOY%"
+                            nssm set "%SVC%" AppEnvironmentExtra HF_HUB_ENABLE_HF_TRANSFER=1
+                            nssm set "%SVC%" Start SERVICE_AUTO_START
+                            nssm set "%SVC%" AppStdout "%DEPLOY%\\logs\\service.log"
+                            nssm set "%SVC%" AppStderr "%DEPLOY%\\logs\\service.log"
 
                             REM Start service
                             nssm start "%SVC%"
