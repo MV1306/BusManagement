@@ -13,6 +13,9 @@ pipeline {
         IT2_SERVICE_NAME = 'IndicTrans2Svc'
         IT2_DEPLOY_PATH  = 'C:\\services\\indictrans2'
         IT2_VENV_PYTHON  = 'C:\\services\\indictrans2\\venv\\Scripts\\python.exe'
+        IT2_APPPOOL      = 'TransitOpsIndic'
+        IT2_IIS_PATH     = 'C:\\inetpub\\wwwroot\\TransitOpsIndic'
+        IT2_IIS_PORT     = '5200'
     }
 
     stages {
@@ -163,6 +166,26 @@ pipeline {
 
                             REM Start service
                             nssm start "%SVC%"
+
+                            REM Create IIS apppool if missing
+                            %SystemRoot%\\System32\\inetsrv\\appcmd list apppool /name:"${IT2_APPPOOL}" >nul 2>&1
+                            if errorlevel 1 (
+                                %SystemRoot%\\System32\\inetsrv\\appcmd add apppool /name:"${IT2_APPPOOL}" /managedRuntimeVersion:""
+                            )
+
+                            REM Create IIS site if missing
+                            %SystemRoot%\\System32\\inetsrv\\appcmd list site /name:"${IT2_APPPOOL}" >nul 2>&1
+                            if errorlevel 1 (
+                                if not exist "${IT2_IIS_PATH}" mkdir "${IT2_IIS_PATH}"
+                                %SystemRoot%\\System32\\inetsrv\\appcmd add site /name:"${IT2_APPPOOL}" /physicalPath:"${IT2_IIS_PATH}" /bindings:"http/*:${IT2_IIS_PORT}:"
+                                %SystemRoot%\\System32\\inetsrv\\appcmd set app "${IT2_APPPOOL}/" /applicationPool:"${IT2_APPPOOL}"
+                            )
+
+                            REM Copy web.config to IIS path
+                            xcopy /Y "%DEPLOY%\\web.config" "${IT2_IIS_PATH}\\"
+
+                            REM Ensure apppool is running
+                            %SystemRoot%\\System32\\inetsrv\\appcmd start apppool /apppool.name:"${IT2_APPPOOL}" >nul 2>&1
                         """
                     }
                 }
