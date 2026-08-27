@@ -1,4 +1,5 @@
-const BASE = 'https://192.168.29.141/TransitOpsAPI/api';
+const BASE = 'https://172.20.10.2:1306/TransitOpsAPI/api';
+//'https://192.168.29.141/TransitOpsAPI/api';
 
 export interface PagedResult<T> {
   items: T[];
