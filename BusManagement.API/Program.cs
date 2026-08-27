@@ -18,6 +18,8 @@ builder.Services.AddCors(
                     .WithOrigins("http://192.168.29.141:100")
                     .WithOrigins("http://192.168.29.141:1306")
                     .WithOrigins("https://192.168.29.141:1306")
+                    .WithOrigins("http://172.20.10.2:1306")
+                    .WithOrigins("https://172.20.10.2:1306")
                     .AllowAnyHeader()
                     .AllowAnyMethod()
         )
@@ -47,7 +49,8 @@ switch (translationProvider.ToLowerInvariant())
     case "libretranslate":
         builder.Services.AddHttpClient<ITranslationProvider, LibreTranslateProvider>(client =>
         {
-            var url = builder.Configuration["Translation:LibreTranslate:Url"] ?? "http://localhost:5000";
+            var url =
+                builder.Configuration["Translation:LibreTranslate:Url"] ?? "http://localhost:5000";
             client.BaseAddress = new Uri(url);
         });
         break;
