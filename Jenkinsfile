@@ -132,9 +132,13 @@ pipeline {
                             sc query "%SVC%" >nul 2>&1
                             if not errorlevel 1 (
                                 sc stop "%SVC%" >nul 2>&1
-                                timeout /t 5 /nobreak >nul
-                                nssm remove "%SVC%" confirm
+                                timeout /t 3 /nobreak >nul
+                                sc delete "%SVC%" >nul 2>&1
                             )
+                            REM Wait until SCM fully releases the service entry
+                            :wait_delete
+                            sc query "%SVC%" >nul 2>&1
+                            if not errorlevel 1 ( timeout /t 2 /nobreak >nul && goto wait_delete )
 
                             REM Copy service files
                             if not exist "%DEPLOY%" mkdir "%DEPLOY%"
