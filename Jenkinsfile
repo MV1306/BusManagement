@@ -16,65 +16,86 @@ pipeline {
     }
 
     stages {
-        stage('API - Restore') {
+        stage('Checkout') {
             steps {
-                dir('BusManagement.API') {
-                    bat 'dotnet restore'
+                checkout scm
+            }
+        }
+
+        stage('Select Components') {
+            steps {
+                script {
+                    def selection = input(
+                        message: 'Select components to build and deploy',
+                        parameters: [
+                            booleanParam(name: 'BUILD_API',    defaultValue: true,  description: '.NET API'),
+                            booleanParam(name: 'BUILD_UI',     defaultValue: true,  description: 'React UI'),
+                            booleanParam(name: 'BUILD_INDIC',  defaultValue: false, description: 'IndicTrans2 Python service')
+                        ]
+                    )
+                    env.BUILD_API   = selection.BUILD_API   .toString()
+                    env.BUILD_UI    = selection.BUILD_UI    .toString()
+                    env.BUILD_INDIC = selection.BUILD_INDIC .toString()
                 }
+            }
+        }
+
+        stage('API - Restore') {
+            when { expression { env.BUILD_API == 'true' } }
+            steps {
+                dir('BusManagement.API') { bat 'dotnet restore' }
             }
         }
 
         stage('API - Build') {
+            when { expression { env.BUILD_API == 'true' } }
             steps {
-                dir('BusManagement.API') {
-                    bat 'dotnet build --no-restore -c Release'
-                }
+                dir('BusManagement.API') { bat 'dotnet build --no-restore -c Release' }
             }
         }
 
         stage('API - Publish') {
+            when { expression { env.BUILD_API == 'true' } }
             steps {
-                dir('BusManagement.API') {
-                    bat 'dotnet publish --no-build -c Release -o ../publish/api'
-                }
+                dir('BusManagement.API') { bat 'dotnet publish --no-build -c Release -o ../publish/api' }
             }
         }
 
         stage('UI - Install') {
+            when { expression { env.BUILD_UI == 'true' } }
             steps {
-                dir('BusManagement.UI') {
-                    bat 'npm ci'
-                }
+                dir('BusManagement.UI') { bat 'npm ci' }
             }
         }
 
         stage('UI - Lint') {
+            when { expression { env.BUILD_UI == 'true' } }
             steps {
-                dir('BusManagement.UI') {
-                    bat 'npx oxlint'
-                }
+                dir('BusManagement.UI') { bat 'npx oxlint' }
             }
         }
 
         stage('UI - Build') {
+            when { expression { env.BUILD_UI == 'true' } }
             steps {
-                dir('BusManagement.UI') {
-                    bat 'npx tsc -b && npx vite build'
-                }
+                dir('BusManagement.UI') { bat 'npx tsc -b && npx vite build' }
             }
         }
 
         stage('Archive Artifacts') {
             steps {
-                archiveArtifacts artifacts: 'publish/api/**', fingerprint: true
-                archiveArtifacts artifacts: 'BusManagement.UI/dist/**', fingerprint: true
-                archiveArtifacts artifacts: 'indictrans_service/**', fingerprint: true
+                script {
+                    if (env.BUILD_API   == 'true') archiveArtifacts artifacts: 'publish/api/**',            fingerprint: true
+                    if (env.BUILD_UI    == 'true') archiveArtifacts artifacts: 'BusManagement.UI/dist/**',  fingerprint: true
+                    if (env.BUILD_INDIC == 'true') archiveArtifacts artifacts: 'indictrans_service/**',     fingerprint: true
+                }
             }
         }
 
         stage('Deploy') {
             parallel {
                 stage('Deploy API') {
+                    when { expression { env.BUILD_API == 'true' } }
                     steps {
                         bat """
                             %SystemRoot%\\System32\\inetsrv\\appcmd stop apppool /apppool.name:"${API_APPPOOL}"
@@ -86,6 +107,7 @@ pipeline {
                 }
 
                 stage('Deploy UI') {
+                    when { expression { env.BUILD_UI == 'true' } }
                     steps {
                         bat """
                             %SystemRoot%\\System32\\inetsrv\\appcmd stop apppool /apppool.name:"${UI_APPPOOL}"
@@ -97,6 +119,7 @@ pipeline {
                 }
 
                 stage('Deploy IndicTrans2') {
+                    when { expression { env.BUILD_INDIC == 'true' } }
                     steps {
                         bat """
                             @echo off
@@ -144,16 +167,8 @@ pipeline {
     }
 
     post {
-        success {
-            echo 'Pipeline completed successfully.'
-        }
-
-        failure {
-            echo 'Pipeline failed. Check the logs above.'
-        }
-
-        always {
-            cleanWs()
-        }
+        success { echo 'Pipeline completed successfully.' }
+        failure { echo 'Pipeline failed. Check the logs above.' }
+        always  { cleanWs() }
     }
 }
