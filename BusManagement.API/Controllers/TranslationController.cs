@@ -28,19 +28,50 @@ public class TranslationController(
         if (untranslated.Count == 0)
             return Ok(new { translated = 0, message = "All stops already have Tamil translations." });
 
-        var translations = new List<StopTranslation>();
-        foreach (var s in untranslated)
+        // Use batch translation when the provider supports it (IndicTrans2), else fall back to sequential.
+        List<string> translatedNames;
+        List<string?> translatedShortNames;
+
+        if (translator is IndicTranslateProvider batchProvider)
         {
-            translations.Add(new StopTranslation
+            translatedNames = await batchProvider.TranslateBatchAsync(
+                untranslated.Select(s => s.StopName).ToList(), LangCode);
+
+            // Only send stops that actually have a ShortName to the batch
+            var shortEntries = untranslated
+                .Select((s, i) => (s.ShortName, Index: i))
+                .Where(x => x.ShortName is not null)
+                .ToList();
+
+            translatedShortNames = Enumerable.Repeat<string?>(null, untranslated.Count).ToList();
+            if (shortEntries.Count > 0)
             {
-                StopId = s.StopId,
-                LanguageCode = LangCode,
-                TranslatedName = await translator.TranslateAsync(s.StopName, LangCode),
-                TranslatedShortName = s.ShortName is not null
-                    ? await translator.TranslateAsync(s.ShortName, LangCode)
-                    : null,
-            });
+                var shortResults = await batchProvider.TranslateBatchAsync(
+                    shortEntries.Select(x => x.ShortName!).ToList(), LangCode);
+                for (var i = 0; i < shortEntries.Count; i++)
+                    translatedShortNames[shortEntries[i].Index] = shortResults[i];
+            }
         }
+        else
+        {
+            translatedNames = [];
+            translatedShortNames = [];
+            foreach (var s in untranslated)
+            {
+                translatedNames.Add(await translator.TranslateAsync(s.StopName, LangCode));
+                translatedShortNames.Add(s.ShortName is not null
+                    ? await translator.TranslateAsync(s.ShortName, LangCode)
+                    : null);
+            }
+        }
+
+        var translations = untranslated.Select((s, i) => new StopTranslation
+        {
+            StopId = s.StopId,
+            LanguageCode = LangCode,
+            TranslatedName = translatedNames[i],
+            TranslatedShortName = translatedShortNames[i],
+        }).ToList();
 
         db.StopTranslations.AddRange(translations);
         await db.SaveChangesAsync();
@@ -196,16 +227,26 @@ public class TranslationController(
         if (untranslated.Count == 0)
             return Ok(new { translated = 0, message = "All stages already have Tamil translations." });
 
-        var translations = new List<StageTranslation>();
-        foreach (var s in untranslated)
+        // Use batch translation when the provider supports it (IndicTrans2), else fall back to sequential.
+        List<string> translatedNames;
+        if (translator is IndicTranslateProvider batchProvider)
         {
-            translations.Add(new StageTranslation
-            {
-                RouteStageId = s.RouteStageId,
-                LanguageCode = LangCode,
-                TranslatedName = await translator.TranslateAsync(s.StageName, LangCode),
-            });
+            translatedNames = await batchProvider.TranslateBatchAsync(
+                untranslated.Select(s => s.StageName).ToList(), LangCode);
         }
+        else
+        {
+            translatedNames = [];
+            foreach (var s in untranslated)
+                translatedNames.Add(await translator.TranslateAsync(s.StageName, LangCode));
+        }
+
+        var translations = untranslated.Select((s, i) => new StageTranslation
+        {
+            RouteStageId = s.RouteStageId,
+            LanguageCode = LangCode,
+            TranslatedName = translatedNames[i],
+        }).ToList();
 
         db.StageTranslations.AddRange(translations);
         await db.SaveChangesAsync();

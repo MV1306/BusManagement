@@ -34,3 +34,14 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# ========================
+# IndicTrans2 Python service
+# ========================
+indictrans_service/venv/
+indictrans_service/__pycache__/
+indictrans_service/*.pyc
+indictrans_service/IndicTransToolkit/build/
+indictrans_service/IndicTransToolkit/dist/
+indictrans_service/IndicTransToolkit/*.egg-info/
+indictrans_service/logs/

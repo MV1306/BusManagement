@@ -57,6 +57,13 @@ switch (translationProvider.ToLowerInvariant())
     case "google":
         builder.Services.AddHttpClient<ITranslationProvider, GoogleTranslateProvider>();
         break;
+    case "indictrans2":
+        builder.Services.AddHttpClient<ITranslationProvider, IndicTranslateProvider>(client =>
+        {
+            var url = builder.Configuration["Translation:IndicTrans2:Url"] ?? "http://localhost:5100";
+            client.BaseAddress = new Uri(url);
+        });
+        break;
     default:
         builder.Services.AddSingleton<ITranslationProvider, FallbackTransliterationProvider>();
         break;
