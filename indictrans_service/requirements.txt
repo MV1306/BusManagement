@@ -1,9 +1,0 @@
-fastapi
-uvicorn[standard]
-torch
-transformers
-sentencepiece
-sacremoses
-# Clone and install IndicTransToolkit separately:
-# git clone https://github.com/VarunGumma/IndicTransToolkit.git
-# pip install --editable ./IndicTransToolkit

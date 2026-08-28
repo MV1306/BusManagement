@@ -44,6 +44,7 @@ function StopTranslationPanel() {
   const [originalShortName, setOriginalShortName] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [autoTranslating, setAutoTranslating] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
 
   useEffect(() => {
@@ -66,6 +67,22 @@ function StopTranslationPanel() {
       if (t.translatedName) setTranslatedIds(prev => new Set(prev).add(Number(id)));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoTranslate = async () => {
+    if (!selectedId) return;
+    setAutoTranslating(true);
+    try {
+      const result = await translationApi.saveStop(Number(selectedId), '', '');
+      setTranslatedName(result.translatedName ?? '');
+      setTranslatedShortName(result.translatedShortName ?? '');
+      setTranslatedIds(prev => new Set(prev).add(Number(selectedId)));
+      toast('Auto-translated successfully.', 'success');
+    } catch {
+      toast('Auto-translation failed.', 'error');
+    } finally {
+      setAutoTranslating(false);
     }
   };
 
@@ -149,12 +166,24 @@ function StopTranslationPanel() {
               </div>
               <div className="form-group" style={{ flex: 1 }}>
                 <label>Tamil Translation *</label>
-                <input
-                  value={translatedName}
-                  onChange={e => setTranslatedName(e.target.value)}
-                  placeholder="Tamil name"
-                  required
-                />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={translatedName}
+                    onChange={e => setTranslatedName(e.target.value)}
+                    placeholder="Tamil name"
+                    required
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={handleAutoTranslate}
+                    disabled={autoTranslating}
+                    title="Auto-translate using IndicTrans2"
+                  >
+                    {autoTranslating ? '⏳' : '✨ Auto'}
+                  </button>
+                </div>
               </div>
             </div>
             {originalShortName !== null && (
