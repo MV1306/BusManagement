@@ -264,95 +264,89 @@ public class TranslationController(
             }),
         });
     }
+
+    // GET api/translation/template/stops
+    [HttpGet("template/stops")]
+    public async Task<IActionResult> StopTranslationTemplate()
+    {
+        var untranslated = await db.Stops
+            .Where(s => !db.StopTranslations.Any(t => t.StopId == s.StopId && t.LanguageCode == LangCode))
+            .OrderBy(s => s.StopName)
+            .Select(s => new { s.StopId, s.StopName, s.ShortName })
+            .ToListAsync();
+
+        using var wb = new XLWorkbook();
+        var ws = wb.AddWorksheet("StopTranslations");
+        ws.Cell(1, 1).Value = "StopId";
+        ws.Cell(1, 2).Value = "StopName";
+        ws.Cell(1, 3).Value = "TranslatedName";
+        ws.Cell(1, 4).Value = "TranslatedShortName";
+        ws.Row(1).Style.Font.Bold = true;
+
+        for (int i = 0; i < untranslated.Count; i++)
+        {
+            var s = untranslated[i];
+            ws.Cell(i + 2, 1).Value = s.StopId;
+            ws.Cell(i + 2, 2).Value = s.StopName;
+            ws.Cell(i + 2, 3).Value = "";
+            ws.Cell(i + 2, 4).Value = s.ShortName ?? "";
+        }
+        ws.Columns().AdjustToContents();
+
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "stop_translations_template.xlsx");
+    }
+
+    // GET api/translation/template/stages
+    [HttpGet("template/stages")]
+    public async Task<IActionResult> StageTranslationTemplate()
+    {
+        var untranslated = await db.RouteStages
+            .Where(s => !db.StageTranslations.Any(t => t.RouteStageId == s.RouteStageId && t.LanguageCode == LangCode))
+            .OrderBy(s => s.StageName)
+            .Select(s => new { s.RouteStageId, s.StageName })
+            .ToListAsync();
+
+        using var wb = new XLWorkbook();
+        var ws = wb.AddWorksheet("StageTranslations");
+        ws.Cell(1, 1).Value = "RouteStageId";
+        ws.Cell(1, 2).Value = "StageName";
+        ws.Cell(1, 3).Value = "TranslatedName";
+        ws.Row(1).Style.Font.Bold = true;
+
+        for (int i = 0; i < untranslated.Count; i++)
+        {
+            var s = untranslated[i];
+            ws.Cell(i + 2, 1).Value = s.RouteStageId;
+            ws.Cell(i + 2, 2).Value = s.StageName;
+            ws.Cell(i + 2, 3).Value = "";
+        }
+        ws.Columns().AdjustToContents();
+
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "stage_translations_template.xlsx");
+    }
+
+    // POST api/translation/import/stops
+    [HttpPost("import/stops")]
+    public async Task<IActionResult> ImportStopTranslations(IFormFile file)
+    {
+        if (file is null || file.Length == 0) return BadRequest("No file uploaded.");
+        var result = await importService.ImportStopTranslationsAsync(file);
+        return Ok(result);
+    }
+
+    // POST api/translation/import/stages
+    [HttpPost("import/stages")]
+    public async Task<IActionResult> ImportStageTranslations(IFormFile file)
+    {
+        if (file is null || file.Length == 0) return BadRequest("No file uploaded.");
+        var result = await importService.ImportStageTranslationsAsync(file);
+        return Ok(result);
+    }
 }
 
 public record TranslateStopRequest(string? TranslatedName, string? TranslatedShortName);
 public record TranslateStageRequest(string? TranslatedName);
-
-// GET api/translation/template/stops
-// Downloads an Excel template pre-filled with untranslated stops.
-[HttpGet("template/stops")]
-public async Task<IActionResult> StopTranslationTemplate()
-{
-    const string lang = "ta";
-    var untranslated = await db.Stops
-        .Where(s => !db.StopTranslations.Any(t => t.StopId == s.StopId && t.LanguageCode == lang))
-        .OrderBy(s => s.StopName)
-        .Select(s => new { s.StopId, s.StopName, s.ShortName })
-        .ToListAsync();
-
-    using var wb = new XLWorkbook();
-    var ws = wb.AddWorksheet("StopTranslations");
-    ws.Cell(1, 1).Value = "StopId";
-    ws.Cell(1, 2).Value = "StopName";
-    ws.Cell(1, 3).Value = "TranslatedName";
-    ws.Cell(1, 4).Value = "TranslatedShortName";
-    ws.Row(1).Style.Font.Bold = true;
-
-    for (int i = 0; i < untranslated.Count; i++)
-    {
-        var s = untranslated[i];
-        ws.Cell(i + 2, 1).Value = s.StopId;
-        ws.Cell(i + 2, 2).Value = s.StopName;
-        ws.Cell(i + 2, 3).Value = "";
-        ws.Cell(i + 2, 4).Value = s.ShortName ?? "";
-    }
-    ws.Columns().AdjustToContents();
-
-    using var ms = new MemoryStream();
-    wb.SaveAs(ms);
-    ms.Position = 0;
-    return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "stop_translations_template.xlsx");
-}
-
-// GET api/translation/template/stages
-// Downloads an Excel template pre-filled with untranslated stages.
-[HttpGet("template/stages")]
-public async Task<IActionResult> StageTranslationTemplate()
-{
-    const string lang = "ta";
-    var untranslated = await db.RouteStages
-        .Where(s => !db.StageTranslations.Any(t => t.RouteStageId == s.RouteStageId && t.LanguageCode == lang))
-        .OrderBy(s => s.StageName)
-        .Select(s => new { s.RouteStageId, s.StageName })
-        .ToListAsync();
-
-    using var wb = new XLWorkbook();
-    var ws = wb.AddWorksheet("StageTranslations");
-    ws.Cell(1, 1).Value = "RouteStageId";
-    ws.Cell(1, 2).Value = "StageName";
-    ws.Cell(1, 3).Value = "TranslatedName";
-    ws.Row(1).Style.Font.Bold = true;
-
-    for (int i = 0; i < untranslated.Count; i++)
-    {
-        var s = untranslated[i];
-        ws.Cell(i + 2, 1).Value = s.RouteStageId;
-        ws.Cell(i + 2, 2).Value = s.StageName;
-        ws.Cell(i + 2, 3).Value = "";
-    }
-    ws.Columns().AdjustToContents();
-
-    using var ms = new MemoryStream();
-    wb.SaveAs(ms);
-    ms.Position = 0;
-    return File(ms.ToArray(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "stage_translations_template.xlsx");
-}
-
-// POST api/translation/import/stops
-[HttpPost("import/stops")]
-public async Task<IActionResult> ImportStopTranslations(IFormFile file)
-{
-    if (file is null || file.Length == 0) return BadRequest("No file uploaded.");
-    var result = await importService.ImportStopTranslationsAsync(file);
-    return Ok(result);
-}
-
-// POST api/translation/import/stages
-[HttpPost("import/stages")]
-public async Task<IActionResult> ImportStageTranslations(IFormFile file)
-{
-    if (file is null || file.Length == 0) return BadRequest("No file uploaded.");
-    var result = await importService.ImportStageTranslationsAsync(file);
-    return Ok(result);
-}
