@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { routesApi, stopsApi, type Route, type RouteStage, type RouteStop, type Stop } from '../api';
+import { routesApi, stopsApi, geocodingApi, type Route, type RouteStage, type RouteStop, type Stop } from '../api';
 import { useToast, useConfirm, usePrompt } from '../toast';
 import StopAutocomplete from '../components/StopAutocomplete';
 import Pagination from '../components/Pagination';
@@ -50,6 +50,19 @@ interface NewStopModalProps {
 }
 
 function NewStopModal({ newStop, setNewStop, onSubmit, onClose }: NewStopModalProps) {
+  const [geocoding, setGeocoding] = useState(false);
+  const { toast } = useToast();
+
+  const fetchCoordinates = async () => {
+    if (!newStop.stopName) { toast('Enter a stop name first.', 'error'); return; }
+    setGeocoding(true);
+    try {
+      const coords = await geocodingApi.geocode(newStop.stopName);
+      setNewStop(s => ({ ...s, latLng: `${coords.latitude}, ${coords.longitude}` }));
+      toast('Coordinates fetched!', 'success');
+    } catch { toast('Could not find coordinates for this stop name.', 'error'); }
+    finally { setGeocoding(false); }
+  };
   return createPortal(
     <div className="confirm-backdrop" onClick={onClose}>
       <div className="confirm-dialog" style={{ minWidth: 480, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
@@ -80,7 +93,12 @@ function NewStopModal({ newStop, setNewStop, onSubmit, onClose }: NewStopModalPr
             </div>
             <div className="form-group">
               <label>Lat, Lng</label>
-              <input value={newStop.latLng} onChange={e => setNewStop(s => ({ ...s, latLng: e.target.value }))} placeholder="13.0827, 80.2707" />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input value={newStop.latLng} onChange={e => setNewStop(s => ({ ...s, latLng: e.target.value }))} placeholder="13.0827, 80.2707" style={{ flex: 1 }} />
+                <button type="button" className="btn btn-subtle btn-sm" onClick={fetchCoordinates} disabled={geocoding} title="Fetch coordinates from stop name" style={{ whiteSpace: 'nowrap' }}>
+                  {geocoding ? '…' : '📍 Fetch'}
+                </button>
+              </div>
             </div>
           </div>
           <div className="confirm-actions">

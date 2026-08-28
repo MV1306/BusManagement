@@ -40,6 +40,11 @@ builder.Services.AddScoped<FareCalculationService>();
 builder.Services.AddScoped<ImportService>();
 builder.Services.AddScoped<DashboardService>();
 builder.Services.AddScoped<GtfsExportService>();
+builder.Services.AddScoped<JourneyPlannerService>();
+builder.Services.AddHttpClient<GeocodingService>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("BusManagement/1.0");
+});
 builder.Services.AddSingleton<TamilTransliterationService>();
 
 // Register translation provider based on config

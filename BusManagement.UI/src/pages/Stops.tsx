@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { stopsApi, type Stop } from '../api';
+import { stopsApi, geocodingApi, type Stop } from '../api';
 import { useToast, useConfirm } from '../toast';
 import StopAutocomplete from '../components/StopAutocomplete';
 import Pagination from '../components/Pagination';
@@ -36,6 +36,7 @@ export default function Stops() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [mergeSource, setMergeSource] = useState('');
   const [mergeTarget, setMergeTarget] = useState('');
+  const [geocoding, setGeocoding] = useState(false);
   const { toast } = useToast();
   const { confirm, Dialog } = useConfirm();
 
@@ -52,6 +53,17 @@ export default function Stops() {
 
   useEffect(() => { load(page, pageSize, debouncedSearch); }, [page, pageSize, debouncedSearch]);
   useEffect(() => { loadAllForMerge(); }, []);
+
+  const fetchCoordinates = async () => {
+    if (!form.stopName) { toast('Enter a stop name first.', 'error'); return; }
+    setGeocoding(true);
+    try {
+      const coords = await geocodingApi.geocode(form.stopName);
+      setForm(f => ({ ...f, coordinates: `${coords.latitude}, ${coords.longitude}` }));
+      toast('Coordinates fetched!', 'success');
+    } catch { toast('Could not find coordinates for this stop name.', 'error'); }
+    finally { setGeocoding(false); }
+  };
 
   const openCreate = () => { setEditing(null); setForm(empty); setShowForm(true); };
   const openEdit   = (s: Stop) => {
@@ -177,7 +189,12 @@ export default function Stops() {
             <div className="form-row">
               <div className="form-group">
                 <label>Coordinates (lat, lng)</label>
-                <input value={form.coordinates} onChange={e => setForm(f => ({ ...f, coordinates: e.target.value }))} placeholder="13.0827, 80.2707" />
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input value={form.coordinates} onChange={e => setForm(f => ({ ...f, coordinates: e.target.value }))} placeholder="13.0827, 80.2707" style={{ flex: 1 }} />
+                  <button type="button" className="btn btn-subtle btn-sm" onClick={fetchCoordinates} disabled={geocoding} title="Fetch coordinates from stop name" style={{ whiteSpace: 'nowrap' }}>
+                    {geocoding ? '…' : '📍 Fetch'}
+                  </button>
+                </div>
               </div>
               <div className="form-group" style={{ justifyContent: 'flex-end' }}>
                 <div className="flex-gap" style={{ marginTop: 'auto' }}>

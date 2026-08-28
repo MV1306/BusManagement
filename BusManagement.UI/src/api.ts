@@ -374,6 +374,41 @@ export const translationApi = {
   },
 };
 
+// ── Journey Planner ─────────────────────────────────────────────────────
+
+export interface JourneyLeg {
+  routeCode: string;
+  routeName: string;
+  boardAt: string;
+  alightAt: string;
+  stops: number;
+  distanceKm: number;
+  stages: number;
+  fare: number;
+}
+
+export interface JourneyPlanResult {
+  from: string;
+  to: string;
+  busType: BusType;
+  totalDistanceKm: number;
+  totalStops: number;
+  transfers: number;
+  totalFare: number;
+  legs: JourneyLeg[];
+}
+
+export const journeyApi = {
+  plan: (fromStopId: number, toStopId: number, busType: BusType, criteria = 'ShortestDistance') =>
+    req<JourneyPlanResult>(`/journey/plan?fromStopId=${fromStopId}&toStopId=${toStopId}&busType=${busType}&criteria=${criteria}`),
+};
+
+// ── Geocoding ─────────────────────────────────────────────────────────────
+
+export const geocodingApi = {
+  geocode: (name: string) => req<{ latitude: number; longitude: number }>(`/stops/geocode?name=${encodeURIComponent(name)}`),
+};
+
 // ── Export ────────────────────────────────────────────────────────────────
 
 export const exportApi = {

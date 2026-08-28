@@ -13,6 +13,7 @@ import RouteCard from './pages/RouteCard';
 import FareAudit from './pages/FareAudit';
 import ExportPage from './pages/ExportPage';
 import Translations from './pages/Translations';
+import JourneyPlanner from './pages/JourneyPlanner';
 
 export default function App() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="routes"     element={<RoutesPage />} />
           <Route path="fares"      element={<Fares />} />
           <Route path="search"     element={<RouteSearch />} />
+          <Route path="journey"    element={<JourneyPlanner />} />
           <Route path="calculator" element={<FareCalculator />} />
           <Route path="matrix"     element={<FareMatrix />} />
           <Route path="import"     element={<Import />} />

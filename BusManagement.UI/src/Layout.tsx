@@ -13,6 +13,7 @@ const navItems = [
   { to: '/import',     icon: <ImportIcon />, label: 'Import',          key: '8' },
   { section: 'Search & Calculate' },
   { to: '/search',     icon: <SearchIcon />, label: 'Route Search',    key: '5' },
+  { to: '/journey',    icon: <PlanIcon />,   label: 'Journey Planner', key: 'J' },
   { to: '/calculator', icon: <CalcIcon />,   label: 'Fare Calculator', key: '6' },
   { to: '/matrix',     icon: <MatrixIcon />, label: 'Fare Matrix',     key: '7' },
   { section: 'Maps & Reports' },
@@ -29,6 +30,7 @@ const titles: Record<string, { label: string; icon: React.ReactNode }> = {
   '/routes':     { label: 'Routes',           icon: <RouteIcon /> },
   '/fares':      { label: 'Fares',            icon: <FareIcon /> },
   '/search':     { label: 'Route Search',     icon: <SearchIcon /> },
+  '/journey':    { label: 'Journey Planner',  icon: <PlanIcon /> },
   '/calculator': { label: 'Fare Calculator',  icon: <CalcIcon /> },
   '/matrix':     { label: 'Fare Matrix',      icon: <MatrixIcon /> },
   '/import':     { label: 'Import',           icon: <ImportIcon /> },
@@ -129,6 +131,7 @@ function StopIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24
 function RouteIcon()     { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><line x1="5" y1="8" x2="5" y2="16"/><path d="M5 16c0 1.1.9 2 2 2h10"/></svg>; }
 function FareIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v2M12 16v2"/></svg>; }
 function SearchIcon()    { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>; }
+function PlanIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>; }
 function CalcIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="12" y2="14"/></svg>; }
 function MatrixIcon()    { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>; }
 function ImportIcon()    { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>; }
