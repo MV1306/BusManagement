@@ -199,6 +199,136 @@ public class ImportService(BusManagementDbContext db)
         return new ImportResult(imported, skipped, errors.Count, errors);
     }
 
+    public async Task<ImportResult> ImportStopTranslationsAsync(IFormFile file)
+    {
+        int imported = 0, skipped = 0;
+        var errors = new List<ImportError>();
+
+        using var workbook = new XLWorkbook(file.OpenReadStream());
+        var sheet = workbook.Worksheet(1);
+        var rows = sheet.RowsUsed().Skip(1).ToList();
+
+        var stopMap = await db.Stops.ToDictionaryAsync(s => s.StopId, s => s);
+        const string lang = "ta";
+
+        foreach (var row in rows)
+        {
+            int rowNum = row.RowNumber();
+            try
+            {
+                if (!int.TryParse(row.Cell(1).GetString().Trim(), out int stopId))
+                {
+                    errors.Add(new ImportError(rowNum, "Invalid StopId."));
+                    skipped++; continue;
+                }
+                string translatedName = row.Cell(3).GetString().Trim();
+                string? translatedShortName = row.Cell(4).IsEmpty() ? null : row.Cell(4).GetString().Trim();
+
+                if (string.IsNullOrEmpty(translatedName))
+                {
+                    errors.Add(new ImportError(rowNum, "TranslatedName is required."));
+                    skipped++; continue;
+                }
+
+                if (!stopMap.ContainsKey(stopId))
+                {
+                    errors.Add(new ImportError(rowNum, $"Stop {stopId} not found."));
+                    skipped++; continue;
+                }
+
+                var existing = await db.StopTranslations
+                    .FirstOrDefaultAsync(t => t.StopId == stopId && t.LanguageCode == lang);
+
+                if (existing is not null)
+                {
+                    existing.TranslatedName = translatedName;
+                    existing.TranslatedShortName = translatedShortName;
+                }
+                else
+                {
+                    db.StopTranslations.Add(new Models.StopTranslation
+                    {
+                        StopId = stopId,
+                        LanguageCode = lang,
+                        TranslatedName = translatedName,
+                        TranslatedShortName = translatedShortName,
+                    });
+                }
+                imported++;
+            }
+            catch (Exception ex)
+            {
+                errors.Add(new ImportError(rowNum, ex.Message));
+                skipped++;
+            }
+        }
+
+        await db.SaveChangesAsync();
+        return new ImportResult(imported, skipped, errors.Count, errors);
+    }
+
+    public async Task<ImportResult> ImportStageTranslationsAsync(IFormFile file)
+    {
+        int imported = 0, skipped = 0;
+        var errors = new List<ImportError>();
+
+        using var workbook = new XLWorkbook(file.OpenReadStream());
+        var sheet = workbook.Worksheet(1);
+        var rows = sheet.RowsUsed().Skip(1).ToList();
+
+        var stageMap = await db.RouteStages.ToDictionaryAsync(s => s.RouteStageId, s => s);
+        const string lang = "ta";
+
+        foreach (var row in rows)
+        {
+            int rowNum = row.RowNumber();
+            try
+            {
+                if (!int.TryParse(row.Cell(1).GetString().Trim(), out int stageId))
+                {
+                    errors.Add(new ImportError(rowNum, "Invalid RouteStageId."));
+                    skipped++; continue;
+                }
+                string translatedName = row.Cell(3).GetString().Trim();
+
+                if (string.IsNullOrEmpty(translatedName))
+                {
+                    errors.Add(new ImportError(rowNum, "TranslatedName is required."));
+                    skipped++; continue;
+                }
+
+                if (!stageMap.ContainsKey(stageId))
+                {
+                    errors.Add(new ImportError(rowNum, $"Stage {stageId} not found."));
+                    skipped++; continue;
+                }
+
+                var existing = await db.StageTranslations
+                    .FirstOrDefaultAsync(t => t.RouteStageId == stageId && t.LanguageCode == lang);
+
+                if (existing is not null)
+                    existing.TranslatedName = translatedName;
+                else
+                    db.StageTranslations.Add(new Models.StageTranslation
+                    {
+                        RouteStageId = stageId,
+                        LanguageCode = lang,
+                        TranslatedName = translatedName,
+                    });
+
+                imported++;
+            }
+            catch (Exception ex)
+            {
+                errors.Add(new ImportError(rowNum, ex.Message));
+                skipped++;
+            }
+        }
+
+        await db.SaveChangesAsync();
+        return new ImportResult(imported, skipped, errors.Count, errors);
+    }
+
     public async Task<ImportResult> ImportFaresAsync(IFormFile file)
     {
         int imported = 0, skipped = 0;

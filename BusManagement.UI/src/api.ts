@@ -358,6 +358,20 @@ export const translationApi = {
     req<StageTranslation>(`/translation/stages/${id}`, { method: 'POST', body: JSON.stringify({ translatedName }) }),
   translateAllStages: () =>
     req<BulkTranslateResult>('/translation/stages', { method: 'POST' }),
+  downloadStopTemplate: () =>
+    fetch(`${BASE}/translation/template/stops`).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.blob(); }),
+  downloadStageTemplate: () =>
+    fetch(`${BASE}/translation/template/stages`).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.blob(); }),
+  importStops: (file: File) => {
+    const fd = new FormData(); fd.append('file', file);
+    return fetch(`${BASE}/translation/import/stops`, { method: 'POST', body: fd })
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() as Promise<ImportResult>; });
+  },
+  importStages: (file: File) => {
+    const fd = new FormData(); fd.append('file', file);
+    return fetch(`${BASE}/translation/import/stages`, { method: 'POST', body: fd })
+      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() as Promise<ImportResult>; });
+  },
 };
 
 // ── Export ────────────────────────────────────────────────────────────────

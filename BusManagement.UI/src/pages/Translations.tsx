@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { stopsApi, routesApi, translationApi, type Stop, type Route, type RouteStage } from '../api';
+import { useEffect, useRef, useState } from 'react';
+import { stopsApi, routesApi, translationApi, type Stop, type Route, type RouteStage, type ImportResult } from '../api';
 import StopAutocomplete from '../components/StopAutocomplete';
 import { useToast } from '../toast';
 
@@ -46,6 +46,9 @@ function StopTranslationPanel() {
   const [loading, setLoading] = useState(false);
   const [autoTranslating, setAutoTranslating] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     stopsApi.getAllUnpaged().then(r => setStops(r.items));
@@ -106,13 +109,40 @@ function StopTranslationPanel() {
     try {
       const result = await translationApi.translateAllStops();
       toast(result.message, 'success');
-      // Refresh stops list so progress counter updates
       const r = await stopsApi.getAllUnpaged();
       setStops(r.items);
     } catch {
       toast('Bulk translation failed.', 'error');
     } finally {
       setBulkRunning(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await translationApi.downloadStopTemplate();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'stop_translations_template.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast('Failed to download template.', 'error');
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const result = await translationApi.importStops(file);
+      setImportResult(result);
+      toast(`Imported ${result.imported} stop translation(s).`, result.failed > 0 ? 'error' : 'success');
+    } catch {
+      toast('Import failed.', 'error');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -138,6 +168,13 @@ function StopTranslationPanel() {
           >
             {bulkRunning ? '⏳ Translating…' : '⚡ Auto-translate all'}
           </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={handleDownloadTemplate} title="Download Excel template with untranslated stops">
+            📥 Download Template
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+            {importing ? '⏳ Importing…' : '📤 Import'}
+          </button>
+          <input ref={fileInputRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleImport} />
         </div>
       </div>
 
@@ -208,6 +245,18 @@ function StopTranslationPanel() {
           </>
         )}
       </form>
+
+      {importResult && (
+        <div style={{ marginTop: 12 }}>
+          <span className="badge badge-blue">{importResult.imported} imported</span>{' '}
+          {importResult.failed > 0 && <span className="badge" style={{ background: 'var(--danger)', color: '#fff' }}>{importResult.failed} failed</span>}
+          {importResult.errors.length > 0 && (
+            <ul style={{ marginTop: 8, fontSize: 13, color: 'var(--danger)' }}>
+              {importResult.errors.map((e, i) => <li key={i}>Row {e.row}: {e.reason}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -225,6 +274,9 @@ function StageTranslationPanel() {
   const [loading, setLoading] = useState(false);
   const [stagesLoading, setStagesLoading] = useState(false);
   const [bulkRunning, setBulkRunning] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     routesApi.getAllUnpaged().then(r => setRoutes(r.items));
@@ -285,6 +337,34 @@ function StageTranslationPanel() {
     }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const blob = await translationApi.downloadStageTemplate();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'stage_translations_template.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast('Failed to download template.', 'error');
+    }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportResult(null);
+    try {
+      const result = await translationApi.importStages(file);
+      setImportResult(result);
+      toast(`Imported ${result.imported} stage translation(s).`, result.failed > 0 ? 'error' : 'success');
+    } catch {
+      toast('Import failed.', 'error');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="card">
       <div className="card-header">
@@ -304,6 +384,13 @@ function StageTranslationPanel() {
           >
             {bulkRunning ? '⏳ Translating…' : '⚡ Auto-translate all'}
           </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={handleDownloadTemplate} title="Download Excel template with untranslated stages">
+            📥 Download Template
+          </button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+            {importing ? '⏳ Importing…' : '📤 Import'}
+          </button>
+          <input ref={fileInputRef} type="file" accept=".xlsx" style={{ display: 'none' }} onChange={handleImport} />
         </div>
       </div>
 
@@ -367,6 +454,18 @@ function StageTranslationPanel() {
           </>
         )}
       </form>
+
+      {importResult && (
+        <div style={{ marginTop: 12 }}>
+          <span className="badge badge-blue">{importResult.imported} imported</span>{' '}
+          {importResult.failed > 0 && <span className="badge" style={{ background: 'var(--danger)', color: '#fff' }}>{importResult.failed} failed</span>}
+          {importResult.errors.length > 0 && (
+            <ul style={{ marginTop: 8, fontSize: 13, color: 'var(--danger)' }}>
+              {importResult.errors.map((e, i) => <li key={i}>Row {e.row}: {e.reason}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
     </div>
   );
 }
