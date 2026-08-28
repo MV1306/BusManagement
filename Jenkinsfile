@@ -96,34 +96,42 @@ pipeline {
         // }
 
         stage('Ensure IndicTrans2 Service') {
-            when { expression { return new File('C:\\services\\indictrans2\\venv\\Scripts\\python.exe').exists() } }
-            steps {
-                script {
-                    bat returnStatus: true, script: """
-                        @echo off
-                        set SVC=${IT2_SERVICE_NAME}
-                        set DEPLOY=${IT2_DEPLOY_PATH}
-                        set VENV_PY=${IT2_VENV_PYTHON}
-
-                        sc query "%SVC%" >nul 2>&1
-                        if errorlevel 1 (
-                            if not exist "%DEPLOY%\\logs" mkdir "%DEPLOY%\\logs"
-                            nssm install "%SVC%" "%VENV_PY%" -m uvicorn main:app --host 127.0.0.1 --port 5100
-                            nssm set "%SVC%" AppDirectory "%DEPLOY%"
-                            nssm set "%SVC%" AppEnvironmentExtra HF_HUB_ENABLE_HF_TRANSFER=1
-                            nssm set "%SVC%" Start SERVICE_AUTO_START
-                            nssm set "%SVC%" AppStdout "%DEPLOY%\\logs\\service.log"
-                            nssm set "%SVC%" AppStderr "%DEPLOY%\\logs\\service.log"
-                            nssm start "%SVC%"
-                        ) else (
-                            sc query "%SVC%" | findstr /i "STOPPED" >nul 2>&1
-                            if not errorlevel 1 nssm start "%SVC%"
-                        )
-                        exit /b 0
-                    """
-                }
-            }
+    when {
+        expression {
+            return fileExists('C:\\services\\indictrans2\\venv\\Scripts\\python.exe')
         }
+    }
+
+    steps {
+        script {
+            bat returnStatus: true, script: """
+                @echo off
+                set "SVC=${IT2_SERVICE_NAME}"
+                set "DEPLOY=${IT2_DEPLOY_PATH}"
+                set "VENV_PY=${IT2_VENV_PYTHON}"
+
+                sc query "%SVC%" >nul 2>&1
+
+                if errorlevel 1 (
+                    if not exist "%DEPLOY%\\logs" mkdir "%DEPLOY%\\logs"
+
+                    nssm install "%SVC%" "%VENV_PY%" -m uvicorn main:app --host 127.0.0.1 --port 5100
+                    nssm set "%SVC%" AppDirectory "%DEPLOY%"
+                    nssm set "%SVC%" AppEnvironmentExtra HF_HUB_ENABLE_HF_TRANSFER=1
+                    nssm set "%SVC%" Start SERVICE_AUTO_START
+                    nssm set "%SVC%" AppStdout "%DEPLOY%\\logs\\service.log"
+                    nssm set "%SVC%" AppStderr "%DEPLOY%\\logs\\service.log"
+                    nssm start "%SVC%"
+                ) else (
+                    sc query "%SVC%" | findstr /i "STOPPED" >nul 2>&1
+                    if not errorlevel 1 nssm start "%SVC%"
+                )
+
+                exit /b 0
+            """
+        }
+    }
+}
 
         stage('Deploy') {
             parallel {
