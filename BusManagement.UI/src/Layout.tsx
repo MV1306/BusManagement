@@ -65,7 +65,7 @@ export default function Layout() {
           <div className="sidebar-brand-icon"><BusIcon /></div>
           {!collapsed && <div style={{ flex: 1 }}>
             <div className="sidebar-brand-text">TransitOps</div>
-            <div className="sidebar-brand-sub">MTC · Chennai</div>
+            <div className="sidebar-brand-sub">MTC · Pass System</div>
           </div>}
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close menu">✕</button>
         </div>
@@ -88,7 +88,7 @@ export default function Layout() {
 
         <div className="sidebar-footer">
           <span className="sidebar-footer-dot" />
-          {!collapsed && <span className="sidebar-footer-text">System Online</span>}
+          {!collapsed && <span className="sidebar-footer-text">Passes Active</span>}
         </div>
       </aside>
 
