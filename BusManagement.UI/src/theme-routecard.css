@@ -17,7 +17,7 @@
 
 .rc-hero {
   position: relative;
-  background: linear-gradient(135deg, #0a0e1a 0%, #1a2a0a 50%, #2a1a00 100%);
+  background: linear-gradient(135deg, #1e1b4b 0%, var(--primary) 100%);
   padding: 28px 32px;
   overflow: hidden;
 }
@@ -38,12 +38,10 @@
 }
 .rc-hero-left { display: flex; align-items: center; gap: 20px; }
 .rc-hero-badge {
-  background: var(--primary); border: 2px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.15); border: 2px solid rgba(255,255,255,.3);
   border-radius: var(--radius-sm); padding: 10px 14px;
-  font-size: 1rem; font-weight: 800; color: #0d1220; letter-spacing: 0.08em;
+  font-size: 1rem; font-weight: 800; color: #fff; letter-spacing: 0.08em;
   backdrop-filter: blur(4px); flex-shrink: 0;
-  font-family: 'JetBrains Mono', monospace;
-  box-shadow: 0 4px 16px rgba(232,160,32,.4);
 }
 .rc-hero-code  { font-size: 2rem; font-weight: 800; color: #fff; line-height: 1; }
 .rc-hero-name  { font-size: 0.95rem; color: rgba(255,255,255,.75); margin-top: 4px; font-weight: 500; }
@@ -126,7 +124,7 @@
 [data-theme="light"] .rc-matrix-self { background: #f1f5f9; }
 [data-theme="light"] .rc-matrix-table th, [data-theme="light"] .rc-matrix-table td { border-color: #e2e8f0; }
 [data-theme="light"] .rc-document { background: #fff; }
-[data-theme="light"] .rc-hero { background: linear-gradient(135deg, #1a1208 0%, #5c3a00 50%, #3a2800 100%); }
+[data-theme="light"] .rc-hero { background: linear-gradient(135deg, #1e293b 0%, var(--primary) 100%); }
 
 @media (max-width: 900px) { .rc-two-col { grid-template-columns: 1fr; } }
 
@@ -194,8 +192,8 @@
 .ticket-foot { background: var(--surface-2); border-left: 1px solid var(--border); border-right: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; justify-content: space-between; }
 .ticket-foot-left  { font-size: 0.68rem; color: var(--text-3); font-style: italic; }
 .ticket-foot-right { font-size: 0.68rem; font-weight: 700; color: var(--text-3); letter-spacing: 0.08em; }
-.ticket-smart .ticket-head { background: linear-gradient(135deg, #0a1a0a 0%, #1a4a10 100%); }
-.ticket-conc  .ticket-head { background: linear-gradient(135deg, #1a0a00 0%, #7c3a00 100%); }
+.ticket-smart .ticket-head { background: linear-gradient(135deg, #0c1445 0%, #1d4ed8 100%); }
+.ticket-conc  .ticket-head { background: linear-gradient(135deg, #1a0533 0%, #7c3aed 100%); }
 
 [data-theme="light"] .ticket-body   { background: #fff; }
 [data-theme="light"] .ticket-foot   { background: #f8fafc; }
