@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE as string;
+const BASE: string = import.meta.env.VITE_API_BASE ?? 'https://192.168.29.141/TransitOpsAPI/api';
 
 type ApiErrorHandler = (msg: string) => void;
 let _onError: ApiErrorHandler | null = null;
