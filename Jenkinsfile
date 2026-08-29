@@ -61,7 +61,10 @@ pipeline {
         stage('UI - Install') {
             when { expression { env.BUILD_UI == 'true' } }
             steps {
-                dir('BusManagement.UI') { bat 'npm ci' }
+                dir('BusManagement.UI') {
+                    bat 'if exist node_modules rd /s /q node_modules'
+                    bat 'npm ci'
+                }
             }
         }
 
