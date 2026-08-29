@@ -111,25 +111,35 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             .Where(r => string.Equals(r.RouteName, route.RouteCode, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        // Score each variant by how well first/last stop names match first/last stage names
+        // Score each variant in both forward and reverse directions against MTC stages
+        // Forward: Chalo first→MTC first, Chalo last→MTC last
+        // Reverse: Chalo first→MTC last, Chalo last→MTC first (wrong direction)
+        // Pick variant+direction with highest score; if reversed wins, flip the stages list
         var best = exactMatches
             .Select(r => new
             {
-                Route = r,
-                Score = FuzzyContains(r.FirstStopName, firstStageName) + FuzzyContains(r.LastStopName, lastStageName),
+                Route        = r,
+                ForwardScore = NameSimilarity(r.FirstStopName, firstStageName) + NameSimilarity(r.LastStopName, lastStageName),
+                ReverseScore = NameSimilarity(r.FirstStopName, lastStageName)  + NameSimilarity(r.LastStopName, firstStageName),
             })
-            .OrderByDescending(x => x.Score)
-            .FirstOrDefault()?.Route ?? exactMatches.FirstOrDefault();
+            .OrderByDescending(x => Math.Max(x.ForwardScore, x.ReverseScore))
+            .FirstOrDefault();
 
         if (best is null)
             return NotFound(new { message = $"No exact match for route '{route.RouteCode}' on Chalo. Found: {string.Join(", ", searchResult.Routes.Select(r => r.RouteName).Distinct())}" });
+
+        // If the variant matches better in reverse, flip the stages so proportional assignment is correct
+        if (best.ReverseScore > best.ForwardScore)
+            stages = [.. stages.OrderByDescending(s => s.StageOrder)];
+
+        var bestRoute = best.Route;
 
         // 3. Fetch full stop sequence from Chalo
         HttpResponseMessage detailRes;
         try
         {
             detailRes = await client.GetAsync(
-                $"https://chalo.com/app/api/scheduler_v4/v4/chennai/routedetailslive?route_id={best.RouteId}&day={day}");
+                $"https://chalo.com/app/api/scheduler_v4/v4/chennai/routedetailslive?route_id={bestRoute.RouteId}&day={day}");
         }
         catch (Exception ex) { return StatusCode(502, new { message = $"Chalo detail fetch failed: {ex.Message}" }); }
 
@@ -228,8 +238,8 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             totalStops     = chaloStops.Count,
             stopsCreated   = created,
             stopsMatched   = matched,
-            chaloRouteId   = best.RouteId,
-            chaloDirection = best.DirectionStopName,
+            chaloRouteId   = bestRoute.RouteId,
+            chaloDirection = bestRoute.DirectionStopName,
         });
     }
 
@@ -303,8 +313,19 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         if (a is null || b is null) return 0;
         var aNorm = a.ToUpperInvariant();
         var bNorm = b.ToUpperInvariant();
-        // Check if any word of b appears in a
         return bNorm.Split(' ').Count(w => w.Length > 3 && aNorm.Contains(w)) > 0 ? 1 : 0;
+    }
+
+    // Richer similarity: counts matching significant words in both directions
+    private static int NameSimilarity(string? a, string? b)
+    {
+        if (a is null || b is null) return 0;
+        var aNorm = NormalizeStopName(a);
+        var bNorm = NormalizeStopName(b);
+        if (string.Equals(aNorm, bNorm, StringComparison.OrdinalIgnoreCase)) return 10;
+        var aWords = aNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var bWords = bNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3);
+        return bWords.Count(w => aWords.Contains(w));
     }
 
     private static double Haversine(double lat1, double lon1, double lat2, double lon2)
