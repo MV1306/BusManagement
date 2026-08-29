@@ -159,9 +159,8 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         {
             var cs = chaloStops[i];
 
-            // Find or create stop
-            var existing = existingStops.FirstOrDefault(s =>
-                string.Equals(s.StopName.Trim(), cs.StopName.Trim(), StringComparison.OrdinalIgnoreCase));
+            // Find or create stop — priority: coordinate proximity → normalized name
+            var existing = FindExistingStop(existingStops, cs.StopName, cs.Lat, cs.Lon);
 
             Stop stop;
             if (existing is not null)
@@ -232,6 +231,71 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             chaloRouteId   = best.RouteId,
             chaloDirection = best.DirectionStopName,
         });
+    }
+
+    // Match rules:
+    // 1. Coords available on both sides → must be within 200m. Name is ignored.
+    // 2. Chalo has coords, DB stop has no coords → name match only (coords will be filled in)
+    // 3. Neither has coords → name match only
+    // Name match = normalised exact OR one contains the other (min 5 chars)
+    // If name matches but coords are available and distance > 500m → NOT a match (different physical stop)
+    private static Stop? FindExistingStop(List<Stop> stops, string chaloName, double lat, double lon)
+    {
+        bool chaloHasCoords = lat != 0 && lon != 0;
+
+        // 1. Coordinate-first: find closest stop within 200m that also has a reasonable name overlap
+        if (chaloHasCoords)
+        {
+            var byCoord = stops
+                .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+                .Select(s => (stop: s, dist: Haversine(lat, lon, s.Latitude!.Value, s.Longitude!.Value)))
+                .Where(x => x.dist <= 0.2)   // 200 m
+                .OrderBy(x => x.dist)
+                .FirstOrDefault();
+            if (byCoord.stop is not null) return byCoord.stop;
+        }
+
+        // 2. Name match — only valid if coords agree (or one side has no coords)
+        var chaloNorm = NormalizeStopName(chaloName);
+
+        bool NameMatches(Stop s)
+        {
+            var dbNorm = NormalizeStopName(s.StopName);
+            return string.Equals(dbNorm, chaloNorm, StringComparison.OrdinalIgnoreCase)
+                || (chaloNorm.Length >= 5 && dbNorm.Length >= 5 &&
+                    (dbNorm.Contains(chaloNorm, StringComparison.OrdinalIgnoreCase) ||
+                     chaloNorm.Contains(dbNorm, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        foreach (var s in stops.Where(NameMatches))
+        {
+            // If both sides have coordinates, reject if they are more than 500m apart
+            if (chaloHasCoords && s.Latitude.HasValue && s.Longitude.HasValue)
+            {
+                var dist = Haversine(lat, lon, s.Latitude.Value, s.Longitude.Value);
+                if (dist > 0.5) continue;   // same name, different place — skip
+            }
+            return s;
+        }
+
+        return null;
+    }
+
+    private static readonly string[] NoiseWords =
+        ["BUS STAND", "BUS DEPOT", "BUS TERMINUS", "BUS STOP", "TERMINUS",
+         "DEPOT", "JUNCTION", "JN", "JN.", "METRO", "STATION",
+         "WEST", "EAST", "NORTH", "SOUTH", "HEAD POST OFFICE",
+         "POST OFFICE", "INTERNATIONAL AIRPORT", "NATIONAL AIRPORT"];
+
+    private static string NormalizeStopName(string name)
+    {
+        var n = name.Trim().ToUpperInvariant();
+        foreach (var noise in NoiseWords)
+            n = n.Replace(noise, "", StringComparison.OrdinalIgnoreCase);
+        // Collapse multiple spaces and strip punctuation
+        n = System.Text.RegularExpressions.Regex.Replace(n, @"[^A-Z0-9 ]", "");
+        n = System.Text.RegularExpressions.Regex.Replace(n, @"\s+", " ").Trim();
+        return n;
     }
 
     private static int FuzzyContains(string? a, string? b)
