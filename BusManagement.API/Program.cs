@@ -1,6 +1,11 @@
+using System.Text;
 using BusManagement.API.Data;
+using BusManagement.API.Models;
 using BusManagement.API.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using Serilog;
 
@@ -74,6 +79,24 @@ switch (translationProvider.ToLowerInvariant())
 }
 
 builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        var key = builder.Configuration["Jwt:Key"]!;
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+        };
+    });
+builder.Services.AddAuthorization();
+
+builder.Services
     .AddControllers()
     .AddJsonOptions(
         o =>
@@ -92,6 +115,8 @@ app.UseSwaggerUI();
 app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
 app.UseCors("AllowUI");
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 // Auto-migrate on startup (controlled by config)
@@ -100,6 +125,20 @@ if (app.Configuration.GetValue<bool>("AutoMigrateOnStartup"))
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<BusManagementDbContext>();
     db.Database.Migrate();
+
+    // Seed admin if not exists
+    if (!db.AppUsers.Any(u => u.Role == "Admin"))
+    {
+        var adminUser = new AppUser
+        {
+            Username = app.Configuration["Admin:Username"] ?? "admin",
+            Role = "Admin",
+        };
+        adminUser.PasswordHash = new PasswordHasher<AppUser>().HashPassword(adminUser,
+            app.Configuration["Admin:Password"] ?? "Admin@123");
+        db.AppUsers.Add(adminUser);
+        db.SaveChanges();
+    }
 }
 
 app.Run();

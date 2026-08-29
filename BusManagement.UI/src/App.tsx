@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { setApiErrorHandler } from './api';
 import { useToast } from './toast';
+import { AuthProvider, ProtectedRoute } from './auth';
 import Layout from './Layout';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Stops from './pages/Stops';
 import RoutesPage from './pages/Routes';
@@ -19,35 +21,47 @@ import Translations from './pages/Translations';
 import JourneyPlanner from './pages/JourneyPlanner';
 import RouteBusTypes from './pages/RouteBusTypes';
 
-export default function App() {
+function AppRoutes() {
   const { toast } = useToast();
-
   useEffect(() => {
     setApiErrorHandler(msg => toast(`API error: ${msg}`, 'error'));
   }, [toast]);
 
   return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route index element={<Navigate to="/dashboard" replace />} />
+
+        {/* Admin only */}
+        <Route path="dashboard"    element={<ProtectedRoute roles={['Admin']}><Dashboard /></ProtectedRoute>} />
+        <Route path="stops"        element={<ProtectedRoute roles={['Admin']}><Stops /></ProtectedRoute>} />
+        <Route path="routes"       element={<ProtectedRoute roles={['Admin']}><RoutesPage /></ProtectedRoute>} />
+        <Route path="bustypes"     element={<ProtectedRoute roles={['Admin']}><RouteBusTypes /></ProtectedRoute>} />
+        <Route path="fares"        element={<ProtectedRoute roles={['Admin']}><Fares /></ProtectedRoute>} />
+        <Route path="import"       element={<ProtectedRoute roles={['Admin']}><Import /></ProtectedRoute>} />
+        <Route path="export"       element={<ProtectedRoute roles={['Admin']}><ExportPage /></ProtectedRoute>} />
+        <Route path="translations" element={<ProtectedRoute roles={['Admin']}><Translations /></ProtectedRoute>} />
+        <Route path="audit"        element={<ProtectedRoute roles={['Admin']}><FareAudit /></ProtectedRoute>} />
+
+        {/* Admin + User */}
+        <Route path="search"     element={<ProtectedRoute roles={['Admin', 'User']}><RouteSearch /></ProtectedRoute>} />
+        <Route path="journey"    element={<ProtectedRoute roles={['Admin', 'User']}><JourneyPlanner /></ProtectedRoute>} />
+        <Route path="calculator" element={<ProtectedRoute roles={['Admin', 'User']}><FareCalculator /></ProtectedRoute>} />
+        <Route path="matrix"     element={<ProtectedRoute roles={['Admin', 'User']}><FareMatrix /></ProtectedRoute>} />
+        <Route path="coverage"   element={<ProtectedRoute roles={['Admin', 'User']}><CoverageMap /></ProtectedRoute>} />
+        <Route path="routecard"  element={<ProtectedRoute roles={['Admin', 'User']}><RouteCard /></ProtectedRoute>} />
+      </Route>
+    </Routes>
+  );
+}
+
+export default function App() {
+  return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard"  element={<Dashboard />} />
-          <Route path="stops"      element={<Stops />} />
-          <Route path="routes"     element={<RoutesPage />} />
-          <Route path="fares"      element={<Fares />} />
-          <Route path="search"     element={<RouteSearch />} />
-          <Route path="journey"    element={<JourneyPlanner />} />
-          <Route path="calculator" element={<FareCalculator />} />
-          <Route path="matrix"     element={<FareMatrix />} />
-          <Route path="import"     element={<Import />} />
-          <Route path="coverage"   element={<CoverageMap />} />
-          <Route path="routecard"  element={<RouteCard />} />
-          <Route path="audit"      element={<FareAudit />} />
-          <Route path="bustypes"   element={<RouteBusTypes />} />
-          <Route path="export"       element={<ExportPage />} />
-          <Route path="translations" element={<Translations />} />
-        </Route>
-      </Routes>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   );
 }

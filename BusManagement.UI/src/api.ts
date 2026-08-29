@@ -12,9 +12,13 @@ export interface PagedResult<T> {
   totalPages: number;
 }
 
+export function getToken() { return localStorage.getItem('token'); }
+export function setToken(t: string | null) { t ? localStorage.setItem('token', t) : localStorage.removeItem('token'); }
+
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getToken();
   const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
     ...options,
   });
   if (res.status === 204) return undefined as T;
@@ -149,6 +153,17 @@ export interface SmartFareResult {
   segments: { routeCode: string; busType: BusType; fromStop: string; toStop: string; stages: number; fare: number }[];
   totalFare: number;
 }
+
+// ── Auth ──────────────────────────────────────────────────────────────────
+
+export interface AuthResponse { token: string; role: string; username: string; }
+
+export const authApi = {
+  login: (username: string, password: string) =>
+    req<AuthResponse>('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  register: (username: string, password: string) =>
+    req<AuthResponse>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) }),
+};
 
 // ── Stops ──────────────────────────────────────────────────────────────────
 

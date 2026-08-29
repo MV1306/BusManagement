@@ -14,6 +14,7 @@ public class BusManagementDbContext(DbContextOptions<BusManagementDbContext> opt
     public DbSet<StopTranslation> StopTranslations => Set<StopTranslation>();
     public DbSet<StageTranslation> StageTranslations => Set<StageTranslation>();
     public DbSet<RouteBusType> RouteBusTypes => Set<RouteBusType>();
+    public DbSet<AppUser> AppUsers => Set<AppUser>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -93,6 +94,15 @@ public class BusManagementDbContext(DbContextOptions<BusManagementDbContext> opt
             e.HasIndex(r => new { r.RouteId, r.BusType }).IsUnique();
             e.Property(r => r.BusType).HasConversion<string>().HasMaxLength(20);
             e.HasOne(r => r.Route).WithMany(rt => rt.RouteBusTypes).HasForeignKey(r => r.RouteId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AppUser>(e =>
+        {
+            e.HasKey(u => u.UserId);
+            e.HasIndex(u => u.Username).IsUnique();
+            e.Property(u => u.Username).HasMaxLength(50).IsRequired();
+            e.Property(u => u.PasswordHash).IsRequired();
+            e.Property(u => u.Role).HasMaxLength(10).IsRequired();
         });
     }
 }
