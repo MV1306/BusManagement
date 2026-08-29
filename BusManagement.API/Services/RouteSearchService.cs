@@ -20,24 +20,24 @@ public class RouteSearchService(BusManagementDbContext db)
             .Select(r => new
             {
                 r.RouteId, r.RouteCode, r.RouteName,
-                BoardingStageOrder = r.RouteStops.Where(rs => rs.StopId == fromStopId).Select(rs => rs.RouteStage.StageOrder).First(),
-                DestStageOrder = r.RouteStops.Where(rs => rs.StopId == toStopId).Select(rs => rs.RouteStage.StageOrder).First(),
+                BoardingStopOrder = r.RouteStops.Where(rs => rs.StopId == fromStopId).Select(rs => rs.StopOrder).First(),
+                DestStopOrder = r.RouteStops.Where(rs => rs.StopId == toStopId).Select(rs => rs.StopOrder).First(),
                 TotalStops = r.RouteStops.Count,
-                AllStages = r.RouteStages.OrderBy(rs => rs.StageOrder).ToList(),
+                AllStops = r.RouteStops.OrderBy(rs => rs.StopOrder).Select(rs => new { rs.StopOrder, rs.DistanceFromPreviousKm }).ToList(),
                 BusTypes = r.RouteBusTypes.Select(bt => bt.BusType.ToString()).ToList()
             })
             .ToListAsync();
 
         var validRoutes = routes.Select(r =>
         {
-            int minOrder = Math.Min(r.BoardingStageOrder, r.DestStageOrder);
-            int maxOrder = Math.Max(r.BoardingStageOrder, r.DestStageOrder);
-            double distKm = Math.Round(r.AllStages
-                .Where(s => s.StageOrder > minOrder && s.StageOrder <= maxOrder)
-                .Sum(s => s.DistanceFromPreviousKm ?? 0), 2);
-            int stages = maxOrder - minOrder + 1;
+            int minOrder = Math.Min(r.BoardingStopOrder, r.DestStopOrder);
+            int maxOrder = Math.Max(r.BoardingStopOrder, r.DestStopOrder);
+            double distKm = Math.Round(r.AllStops
+                .Where(s => s.StopOrder > minOrder && s.StopOrder <= maxOrder)
+                .Sum(s => s.DistanceFromPreviousKm), 2);
+            int stops = maxOrder - minOrder + 1;
             return new DirectRouteResult(r.RouteId, r.RouteCode, r.RouteName,
-                r.BoardingStageOrder, r.DestStageOrder, stages, distKm, null, r.BusTypes);
+                r.BoardingStopOrder, r.DestStopOrder, stops, distKm, null, r.BusTypes);
         }).ToList();
 
         return new RouteSearchResponse(fromStop.StopName, toStop.StopName, validRoutes);

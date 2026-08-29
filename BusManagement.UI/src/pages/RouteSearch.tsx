@@ -13,7 +13,7 @@ L.Icon.Default.mergeOptions({
 });
 
 const BUS_TYPE_COLORS: Record<BusType, { color: string; dim: string }> = {
-  Ordinary: { color: '#e8e8e8', dim: 'rgba(232,232,232,.15)' },
+  Ordinary: { color: '#888888', dim: 'rgba(136,136,136,.15)' },
   Express:  { color: '#4caf50', dim: 'rgba(76,175,80,.15)'   },
   Deluxe:   { color: '#2196f3', dim: 'rgba(33,150,243,.15)'  },
   AC:       { color: '#f44336', dim: 'rgba(244,67,54,.15)'   },

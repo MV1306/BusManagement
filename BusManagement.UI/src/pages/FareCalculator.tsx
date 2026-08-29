@@ -85,7 +85,7 @@ function useRouteAC(routes: Route[], onSelect?: () => void) {
 }
 
 const BUS_TYPE_COLORS: Record<BusType, string> = {
-  Ordinary: '#e8e8e8',
+  Ordinary: '#888888',
   Express:  '#4caf50',
   Deluxe:   '#2196f3',
   AC:       '#f44336',
