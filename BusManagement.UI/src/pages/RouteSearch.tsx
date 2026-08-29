@@ -13,10 +13,10 @@ L.Icon.Default.mergeOptions({
 });
 
 const BUS_TYPE_COLORS: Record<BusType, { color: string; dim: string }> = {
-  Ordinary: { color: '#5a9e6f', dim: 'rgba(90,158,111,.15)' },
-  Express:  { color: '#c2692a', dim: 'rgba(194,105,42,.15)' },
-  Deluxe:   { color: '#4a9b8e', dim: 'rgba(74,155,142,.15)' },
-  AC:       { color: '#d4a017', dim: 'rgba(212,160,23,.15)' },
+  Ordinary: { color: '#e8e8e8', dim: 'rgba(232,232,232,.15)' },
+  Express:  { color: '#4caf50', dim: 'rgba(76,175,80,.15)'   },
+  Deluxe:   { color: '#2196f3', dim: 'rgba(33,150,243,.15)'  },
+  AC:       { color: '#f44336', dim: 'rgba(244,67,54,.15)'   },
 };
 
 function BusTypePills({ types }: { types: BusType[] }) {
