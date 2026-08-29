@@ -140,8 +140,10 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         if (chaloStops is null || chaloStops.Count == 0)
             return NotFound(new { message = "No stops found in Chalo response." });
 
-        // 4. Load existing stops from DB for name-matching
+        // 4. Load existing stops from DB for name-matching + existing codes for uniqueness
         var existingStops = await db.Stops.ToListAsync();
+        var existingCodes = existingStops.Select(s => s.StopCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        int codeCounter = await db.Stops.MaxAsync(s => (int?)s.StopId) ?? 0;
 
         // 5. Clear existing route stops before reimport
         var existingRouteStops = await db.RouteStops.Where(rs => rs.RouteId == routeId).ToListAsync();
@@ -175,16 +177,21 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             }
             else
             {
+                string code;
+                do { code = GenerateStopCode(cs.StopName, ++codeCounter); }
+                while (existingCodes.Contains(code));
+                existingCodes.Add(code);
+
                 stop = new Stop
                 {
-                    StopCode  = GenerateStopCode(cs.StopName),
+                    StopCode  = code,
                     StopName  = cs.StopName.Trim().ToUpperInvariant(),
                     Latitude  = cs.Lat != 0 ? cs.Lat : null,
                     Longitude = cs.Lon != 0 ? cs.Lon : null,
                     CreatedBy = "ChaloImport",
                 };
                 db.Stops.Add(stop);
-                existingStops.Add(stop); // prevent duplicates within same import
+                existingStops.Add(stop);
                 created++;
             }
 
@@ -247,13 +254,12 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         return R * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
     }
 
-    private static string GenerateStopCode(string name)
+    private static string GenerateStopCode(string name, int index)
     {
         var words = name.Trim().ToUpperInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var prefix = string.Concat(words.Take(3).Select(w => w[0]));
         prefix = prefix.PadRight(3, 'X')[..3];
-        var hex = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString("X")[^6..];
-        return $"{prefix}-{hex}";
+        return $"{prefix}-{index:D5}";
     }
 
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };
