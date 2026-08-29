@@ -6,8 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusManagement.API.Services;
 
-public class ImportService(BusManagementDbContext db)
+public class ImportService(BusManagementDbContext db, IConfiguration configuration)
 {
+    private string TranslationLang => configuration["Translation:LanguageCode"] ?? "ta";
     public async Task<ImportResult> ImportStopsAsync(IFormFile file)
     {
         int imported = 0, skipped = 0;
@@ -209,7 +210,7 @@ public class ImportService(BusManagementDbContext db)
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
         var stopMap = await db.Stops.ToDictionaryAsync(s => s.StopId, s => s);
-        const string lang = "ta";
+        string lang = TranslationLang;
 
         foreach (var row in rows)
         {
@@ -277,7 +278,7 @@ public class ImportService(BusManagementDbContext db)
         var rows = sheet.RowsUsed().Skip(1).ToList();
 
         var stageMap = await db.RouteStages.ToDictionaryAsync(s => s.RouteStageId, s => s);
-        const string lang = "ta";
+        string lang = TranslationLang;
 
         foreach (var row in rows)
         {

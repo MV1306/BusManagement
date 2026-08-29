@@ -1,4 +1,7 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { setApiErrorHandler } from './api';
+import { useToast } from './toast';
 import Layout from './Layout';
 import Dashboard from './pages/Dashboard';
 import Stops from './pages/Stops';
@@ -16,6 +19,12 @@ import Translations from './pages/Translations';
 import JourneyPlanner from './pages/JourneyPlanner';
 
 export default function App() {
+  const { toast } = useToast();
+
+  useEffect(() => {
+    setApiErrorHandler(msg => toast(`API error: ${msg}`, 'error'));
+  }, [toast]);
+
   return (
     <BrowserRouter>
       <Routes>

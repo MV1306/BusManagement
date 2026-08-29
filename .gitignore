@@ -18,6 +18,9 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+.env
+.env.development
+.env.production
 
 # ========================
 # Logs

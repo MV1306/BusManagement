@@ -2,28 +2,27 @@ using BusManagement.API.Data;
 using BusManagement.API.Services;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Serilog;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Host.UseSerilog((ctx, cfg) => cfg.ReadFrom.Configuration(ctx.Configuration));
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(
     options =>
         options.AddPolicy(
             "AllowUI",
-            policy =>
-                policy
-                    .WithOrigins("http://localhost:5173")
-                    .WithOrigins("http://localhost:5174")
-                    .WithOrigins("http://192.168.29.141:100")
-                    .WithOrigins("http://192.168.29.141:1306")
-                    .WithOrigins("https://192.168.29.141:1306")
-                    .WithOrigins("http://172.20.10.2:1306")
-                    .WithOrigins("https://172.20.10.2:1306")
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
+            policy => policy
+                .WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()
         )
 );
+
+builder.Services.AddMemoryCache();
 
 builder.Services.AddDbContext<BusManagementDbContext>(
     options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
@@ -90,13 +89,15 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseSerilogRequestLogging();
 app.UseHttpsRedirection();
 app.UseCors("AllowUI");
 app.MapControllers();
 
-// Auto-migrate on startup
-using (var scope = app.Services.CreateScope())
+// Auto-migrate on startup (controlled by config)
+if (app.Configuration.GetValue<bool>("AutoMigrateOnStartup"))
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<BusManagementDbContext>();
     db.Database.Migrate();
 }

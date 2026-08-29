@@ -1,5 +1,8 @@
-//const BASE = 'https://172.20.10.2/TransitOpsAPI/api';
-const BASE = 'https://192.168.29.141/TransitOpsAPI/api';
+const BASE = import.meta.env.VITE_API_BASE as string;
+
+type ApiErrorHandler = (msg: string) => void;
+let _onError: ApiErrorHandler | null = null;
+export function setApiErrorHandler(fn: ApiErrorHandler) { _onError = fn; }
 
 export interface PagedResult<T> {
   items: T[];
@@ -15,7 +18,11 @@ async function req<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
   });
   if (res.status === 204) return undefined as T;
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    const msg = `${res.status} ${res.statusText}`;
+    _onError?.(msg);
+    throw new Error(msg);
+  }
   return res.json();
 }
 
@@ -225,19 +232,19 @@ export const importApi = {
     const fd = new FormData();
     fd.append('file', file);
     return fetch(`${BASE}/import/stops`, { method: 'POST', body: fd })
-      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() as Promise<ImportResult>; });
+      .then(r => { if (!r.ok) { const msg = `${r.status}`; _onError?.(msg); throw new Error(msg); } return r.json() as Promise<ImportResult>; });
   },
   routes: (file: File) => {
     const fd = new FormData();
     fd.append('file', file);
     return fetch(`${BASE}/import/routes`, { method: 'POST', body: fd })
-      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() as Promise<ImportResult>; });
+      .then(r => { if (!r.ok) { const msg = `${r.status}`; _onError?.(msg); throw new Error(msg); } return r.json() as Promise<ImportResult>; });
   },
   fares: (file: File) => {
     const fd = new FormData();
     fd.append('file', file);
     return fetch(`${BASE}/import/fares`, { method: 'POST', body: fd })
-      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() as Promise<ImportResult>; });
+      .then(r => { if (!r.ok) { const msg = `${r.status}`; _onError?.(msg); throw new Error(msg); } return r.json() as Promise<ImportResult>; });
   },
 };
 
@@ -359,18 +366,18 @@ export const translationApi = {
   translateAllStages: () =>
     req<BulkTranslateResult>('/translation/stages', { method: 'POST' }),
   downloadStopTemplate: () =>
-    fetch(`${BASE}/translation/template/stops`).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.blob(); }),
+    fetch(`${BASE}/translation/template/stops`).then(r => { if (!r.ok) { const msg = `${r.status}`; _onError?.(msg); throw new Error(msg); } return r.blob(); }),
   downloadStageTemplate: () =>
-    fetch(`${BASE}/translation/template/stages`).then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.blob(); }),
+    fetch(`${BASE}/translation/template/stages`).then(r => { if (!r.ok) { const msg = `${r.status}`; _onError?.(msg); throw new Error(msg); } return r.blob(); }),
   importStops: (file: File) => {
     const fd = new FormData(); fd.append('file', file);
     return fetch(`${BASE}/translation/import/stops`, { method: 'POST', body: fd })
-      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() as Promise<ImportResult>; });
+      .then(r => { if (!r.ok) { const msg = `${r.status}`; _onError?.(msg); throw new Error(msg); } return r.json() as Promise<ImportResult>; });
   },
   importStages: (file: File) => {
     const fd = new FormData(); fd.append('file', file);
     return fetch(`${BASE}/translation/import/stages`, { method: 'POST', body: fd })
-      .then(r => { if (!r.ok) throw new Error(`${r.status}`); return r.json() as Promise<ImportResult>; });
+      .then(r => { if (!r.ok) { const msg = `${r.status}`; _onError?.(msg); throw new Error(msg); } return r.json() as Promise<ImportResult>; });
   },
 };
 
@@ -414,7 +421,7 @@ export const geocodingApi = {
 export const exportApi = {
   gtfs: () =>
     fetch(`${BASE}/export/gtfs`).then(r => {
-      if (!r.ok) throw new Error(`${r.status}`);
+      if (!r.ok) { const msg = `${r.status}`; _onError?.(msg); throw new Error(msg); }
       return r.blob();
     }),
 };

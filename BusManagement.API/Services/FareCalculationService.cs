@@ -9,12 +9,11 @@ public class FareCalculationService(BusManagementDbContext db)
 {
     public async Task<FareCalculationResponse?> CalculateAsync(int routeId, int fromStopId, int toStopId, BusType busType)
     {
+        var ids = new[] { fromStopId, toStopId };
+        var lookup = await db.Stops.Where(s => ids.Contains(s.StopId)).ToDictionaryAsync(s => s.StopId);
         var route = await db.Routes.FindAsync(routeId);
-        if (route is null) return null;
-
-        var fromStop = await db.Stops.FindAsync(fromStopId);
-        var toStop = await db.Stops.FindAsync(toStopId);
-        if (fromStop is null || toStop is null) return null;
+        if (route is null || !lookup.TryGetValue(fromStopId, out var fromStop) || !lookup.TryGetValue(toStopId, out var toStop))
+            return null;
 
         var (stages, totalStops, distKm) = await GetStagesAndDistanceAsync(routeId, fromStopId, toStopId);
 
@@ -28,12 +27,11 @@ public class FareCalculationService(BusManagementDbContext db)
 
     public async Task<FareAllTypesResponse?> CalculateAllTypesAsync(int routeId, int fromStopId, int toStopId)
     {
+        var ids = new[] { fromStopId, toStopId };
+        var lookup = await db.Stops.Where(s => ids.Contains(s.StopId)).ToDictionaryAsync(s => s.StopId);
         var route = await db.Routes.FindAsync(routeId);
-        if (route is null) return null;
-
-        var fromStop = await db.Stops.FindAsync(fromStopId);
-        var toStop = await db.Stops.FindAsync(toStopId);
-        if (fromStop is null || toStop is null) return null;
+        if (route is null || !lookup.TryGetValue(fromStopId, out var fromStop) || !lookup.TryGetValue(toStopId, out var toStop))
+            return null;
 
         var (stages, totalStops, distKm) = await GetStagesAndDistanceAsync(routeId, fromStopId, toStopId);
 

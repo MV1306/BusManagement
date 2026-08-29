@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusManagement.API.Services;
 
-public class RouteStopService(BusManagementDbContext db)
+public class RouteStopService(BusManagementDbContext db, SmartRouteService smartRouteService)
 {
     public async Task<List<RouteStopResponse>> GetByRouteAsync(int routeId)
     {
@@ -44,6 +44,7 @@ public class RouteStopService(BusManagementDbContext db)
         };
         db.RouteStops.Add(routeStop);
         await db.SaveChangesAsync();
+        smartRouteService.InvalidateGraphCache();
 
         var stage = await db.RouteStages.FindAsync(req.RouteStageId);
         var all = await db.RouteStops.Where(rs => rs.RouteId == routeId).ToListAsync();
@@ -76,6 +77,7 @@ public class RouteStopService(BusManagementDbContext db)
         if (rs is null) return false;
         db.RouteStops.Remove(rs);
         await db.SaveChangesAsync();
+        smartRouteService.InvalidateGraphCache();
         return true;
     }
 }

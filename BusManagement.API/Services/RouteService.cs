@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BusManagement.API.Services;
 
-public class RouteService(BusManagementDbContext db)
+public class RouteService(BusManagementDbContext db, SmartRouteService smartRouteService)
 {
     public async Task<PagedResult<RouteResponse>> GetAllAsync(int page, int pageSize, string? search = null)
     {
@@ -56,6 +56,7 @@ public class RouteService(BusManagementDbContext db)
         route.ModifiedBy = req.ModifiedBy;
         route.ModifiedDate = DateTime.UtcNow;
         await db.SaveChangesAsync();
+        smartRouteService.InvalidateGraphCache();
         return new RouteResponse(route.RouteId, route.RouteCode, route.RouteName, route.IsActive, null, null);
     }
 
@@ -66,6 +67,7 @@ public class RouteService(BusManagementDbContext db)
         route.IsActive = isActive;
         route.ModifiedDate = DateTime.UtcNow;
         await db.SaveChangesAsync();
+        smartRouteService.InvalidateGraphCache();
         return new RouteResponse(route.RouteId, route.RouteCode, route.RouteName, route.IsActive, null, null);
     }
 
@@ -75,6 +77,7 @@ public class RouteService(BusManagementDbContext db)
         if (route is null) return false;
         db.Routes.Remove(route);
         await db.SaveChangesAsync();
+        smartRouteService.InvalidateGraphCache();
         return true;
     }
 
@@ -107,16 +110,24 @@ public class RouteService(BusManagementDbContext db)
                 DistanceFromPreviousKm = stage.DistanceFromPreviousKm
             };
             db.RouteStages.Add(newStage);
-            await db.SaveChangesAsync();
-            stageIdMap[stage.RouteStageId] = newStage.RouteStageId;
+            stageIdMap[stage.RouteStageId] = newStage.RouteStageId; // will be set after SaveChanges
         }
+        await db.SaveChangesAsync();
+
+        // Now stageIdMap values are 0 — rebuild after save using StageName+StageOrder as key
+        var savedStages = await db.RouteStages
+            .Where(rs => rs.RouteId == newRoute.RouteId)
+            .ToListAsync();
+        var stageOrderMap = source.RouteStages
+            .Join(savedStages, s => s.StageOrder, n => n.StageOrder, (s, n) => (OldId: s.RouteStageId, NewId: n.RouteStageId))
+            .ToDictionary(x => x.OldId, x => x.NewId);
 
         foreach (var rs in source.RouteStops)
             db.RouteStops.Add(new Models.RouteStop
             {
                 RouteId = newRoute.RouteId,
                 StopId = rs.StopId,
-                RouteStageId = stageIdMap[rs.RouteStageId],
+                RouteStageId = stageOrderMap[rs.RouteStageId],
                 StopOrder = rs.StopOrder
             });
         await db.SaveChangesAsync();
