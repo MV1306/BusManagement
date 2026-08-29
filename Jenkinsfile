@@ -1,9 +1,12 @@
 pipeline {
     agent any
 
+    options {
+        skipDefaultCheckout(true)
+    }
+
     environment {
         DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-        NODE_ENV                    = 'production'
 
         VITE_API_BASE   = 'https://192.168.29.141/TransitOpsAPI/api'
 
@@ -11,7 +14,6 @@ pipeline {
         UI_APPPOOL      = 'TransitOpsUI'
         API_DEPLOY_PATH = 'C:\\inetpub\\wwwroot\\TransitOpsAPI'
         UI_DEPLOY_PATH  = 'C:\\inetpub\\wwwroot\\TransitOpsUI'
-
     }
 
     stages {
@@ -27,12 +29,12 @@ pipeline {
                     def selection = input(
                         message: 'Select components to build and deploy',
                         parameters: [
-                            booleanParam(name: 'BUILD_API',    defaultValue: true,  description: '.NET API'),
-                            booleanParam(name: 'BUILD_UI',     defaultValue: true,  description: 'React UI')
+                            booleanParam(name: 'BUILD_API', defaultValue: true, description: '.NET API'),
+                            booleanParam(name: 'BUILD_UI',  defaultValue: true, description: 'React UI')
                         ]
                     )
-                    env.BUILD_API   = selection.BUILD_API   .toString()
-                    env.BUILD_UI    = selection.BUILD_UI    .toString()
+                    env.BUILD_API = selection.BUILD_API.toString()
+                    env.BUILD_UI  = selection.BUILD_UI.toString()
                 }
             }
         }
@@ -58,33 +60,14 @@ pipeline {
             }
         }
 
-        stage('UI - Environment') {
-    when { expression { env.BUILD_UI == 'true' } }
-    steps {
-        dir('BusManagement.UI') {
-            bat '''
-                echo ==== NODE ====
-                node --version
-                where node
-
-                echo ==== NPM ====
-                npm --version
-                where npm
-
-                echo ==== OXLINT ====
-                npm ls oxlint
-                dir node_modules\\.bin
-            '''
-        }
-    }
-}
-
         stage('UI - Install') {
             when { expression { env.BUILD_UI == 'true' } }
             steps {
                 dir('BusManagement.UI') {
-                    bat 'if exist node_modules rd /s /q node_modules'
-                    bat 'npm ci'
+                    bat '''
+                        if exist node_modules rd /s /q node_modules
+                        npm ci --include=dev
+                    '''
                 }
             }
         }
@@ -92,25 +75,19 @@ pipeline {
         stage('UI - Lint') {
             when { expression { env.BUILD_UI == 'true' } }
             steps {
-                dir('BusManagement.UI') { bat 'node_modules\\.bin\\oxlint' }
+                dir('BusManagement.UI') { bat 'npx oxlint .' }
             }
         }
 
         stage('UI - Build') {
             when { expression { env.BUILD_UI == 'true' } }
             steps {
-                dir('BusManagement.UI') { bat 'node_modules\\.bin\\tsc -b && node_modules\\.bin\\vite build' }
+                dir('BusManagement.UI') {
+                    bat 'npx tsc -b'
+                    bat 'npx vite build'
+                }
             }
         }
-
-        // stage('Archive Artifacts') {
-        //     steps {
-        //         script {
-        //             if (env.BUILD_API == 'true') archiveArtifacts artifacts: 'publish/api/**',           fingerprint: true
-        //             if (env.BUILD_UI  == 'true') archiveArtifacts artifacts: 'BusManagement.UI/dist/**', fingerprint: true
-        //         }
-        //     }
-        // }
 
         stage('Deploy') {
             parallel {
@@ -137,7 +114,6 @@ pipeline {
                         """
                     }
                 }
-
             }
         }
     }
