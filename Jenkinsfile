@@ -58,6 +58,27 @@ pipeline {
             }
         }
 
+        stage('UI - Environment') {
+    when { expression { env.BUILD_UI == 'true' } }
+    steps {
+        dir('BusManagement.UI') {
+            bat '''
+                echo ==== NODE ====
+                node --version
+                where node
+
+                echo ==== NPM ====
+                npm --version
+                where npm
+
+                echo ==== OXLINT ====
+                npm ls oxlint
+                dir node_modules\\.bin
+            '''
+        }
+    }
+}
+
         stage('UI - Install') {
             when { expression { env.BUILD_UI == 'true' } }
             steps {
