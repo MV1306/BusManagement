@@ -68,14 +68,14 @@ pipeline {
         stage('UI - Lint') {
             when { expression { env.BUILD_UI == 'true' } }
             steps {
-                dir('BusManagement.UI') { bat 'node_modules\.bin\oxlint' }
+                dir('BusManagement.UI') { bat 'node_modules\\.bin\\oxlint' }
             }
         }
 
         stage('UI - Build') {
             when { expression { env.BUILD_UI == 'true' } }
             steps {
-                dir('BusManagement.UI') { bat 'node_modules\.bin\tsc -b && node_modules\.bin\vite build' }
+                dir('BusManagement.UI') { bat 'node_modules\\.bin\\tsc -b && node_modules\\.bin\\vite build' }
             }
         }
 
