@@ -353,9 +353,12 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         var aNorm = NormalizeStopName(a);
         var bNorm = NormalizeStopName(b);
         if (string.Equals(aNorm, bNorm, StringComparison.OrdinalIgnoreCase)) return 10;
-        var aWords = aNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var bWords = bNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3);
-        return bWords.Count(w => aWords.Contains(w));
+        var aWords = aNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3).ToArray();
+        var bWords = bNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3).ToArray();
+        // Count pairs where either word contains the other (handles spelling variants like KOYAMBEDU/KOYEMBEDU)
+        return bWords.Count(b => aWords.Any(a =>
+            a.Contains(b, StringComparison.OrdinalIgnoreCase) ||
+            b.Contains(a, StringComparison.OrdinalIgnoreCase)));
     }
 
     private static double Haversine(double lat1, double lon1, double lat2, double lon2)
