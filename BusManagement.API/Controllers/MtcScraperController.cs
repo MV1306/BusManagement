@@ -355,10 +355,19 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         if (string.Equals(aNorm, bNorm, StringComparison.OrdinalIgnoreCase)) return 10;
         var aWords = aNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3).ToArray();
         var bWords = bNorm.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3).ToArray();
-        // Count pairs where either word contains the other (handles spelling variants like KOYAMBEDU/KOYEMBEDU)
-        return bWords.Count(b => aWords.Any(a =>
-            a.Contains(b, StringComparison.OrdinalIgnoreCase) ||
-            b.Contains(a, StringComparison.OrdinalIgnoreCase)));
+        // Two words are similar if both are long (>=6) and share a 3-char prefix, OR share a 5-char prefix
+        // This handles transliteration variants like KOYAMBEDU/KOYEMBEDU (diverge at char 4)
+        return bWords.Count(bw => aWords.Any(aw =>
+            (aw.Length >= 6 && bw.Length >= 6 && CommonPrefixLength(aw, bw) >= 3) ||
+            CommonPrefixLength(aw, bw) >= 5));
+    }
+
+    private static int CommonPrefixLength(string a, string b)
+    {
+        int len = Math.Min(a.Length, b.Length);
+        int i = 0;
+        while (i < len && char.ToUpperInvariant(a[i]) == char.ToUpperInvariant(b[i])) i++;
+        return i;
     }
 
     private static double Haversine(double lat1, double lon1, double lat2, double lon2)
