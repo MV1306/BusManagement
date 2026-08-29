@@ -103,7 +103,10 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         if (searchResult?.Routes is null || searchResult.Routes.Count == 0)
             return NotFound(new { message = $"Route '{route.RouteCode}' not found on Chalo." });
 
-        // 2. Find the best matching variant: exact route_name match, then match first/last stop to first/last stage
+        // 2. Find the best matching variant using direction_stop_name (most reliable signal)
+        // direction_stop_name = the terminal the bus is heading TO
+        // So if it matches MTC destination → correct direction
+        //    if it matches MTC origin     → reversed variant
         var firstStageName = stages.First().StageName;
         var lastStageName  = stages.Last().StageName;
 
@@ -111,28 +114,38 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             .Where(r => string.Equals(r.RouteName, route.RouteCode, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        // Score each variant in both forward and reverse directions against MTC stages
-        // Forward: Chalo first→MTC first, Chalo last→MTC last
-        // Reverse: Chalo first→MTC last, Chalo last→MTC first (wrong direction)
-        // Pick variant+direction with highest score; if reversed wins, flip the stages list
-        var best = exactMatches
-            .Select(r => new
-            {
-                Route        = r,
-                ForwardScore = NameSimilarity(r.FirstStopName, firstStageName) + NameSimilarity(r.LastStopName, lastStageName),
-                ReverseScore = NameSimilarity(r.FirstStopName, lastStageName)  + NameSimilarity(r.LastStopName, firstStageName),
-            })
-            .OrderByDescending(x => Math.Max(x.ForwardScore, x.ReverseScore))
-            .FirstOrDefault();
-
-        if (best is null)
+        if (exactMatches.Count == 0)
             return NotFound(new { message = $"No exact match for route '{route.RouteCode}' on Chalo. Found: {string.Join(", ", searchResult.Routes.Select(r => r.RouteName).Distinct())}" });
 
-        // If the variant matches better in reverse, flip the stages so proportional assignment is correct
-        if (best.ReverseScore > best.ForwardScore)
+        // Score each variant: direction_stop_name matching destination = forward, matching origin = reversed
+        var scored = exactMatches.Select(r => new
+        {
+            Route        = r,
+            TowardsDest  = NameSimilarity(r.DirectionStopName, lastStageName),
+            TowardsOrigin= NameSimilarity(r.DirectionStopName, firstStageName),
+            // Fallback: endpoint name matching
+            ForwardScore = NameSimilarity(r.FirstStopName, firstStageName) + NameSimilarity(r.LastStopName, lastStageName),
+            ReverseScore = NameSimilarity(r.FirstStopName, lastStageName)  + NameSimilarity(r.LastStopName, firstStageName),
+        }).ToList();
+
+        // Prefer variant whose direction_stop_name points toward MTC destination
+        var bestScored = scored
+            .OrderByDescending(x => x.TowardsDest)
+            .ThenByDescending(x => x.ForwardScore)
+            .First();
+
+        // Determine if we need to flip: direction points to origin instead of destination
+        bool needsFlip = bestScored.TowardsOrigin > bestScored.TowardsDest
+            && bestScored.TowardsOrigin > 0;
+
+        // If no direction signal at all, fall back to endpoint scoring
+        if (bestScored.TowardsDest == 0 && bestScored.TowardsOrigin == 0)
+            needsFlip = bestScored.ReverseScore > bestScored.ForwardScore;
+
+        if (needsFlip)
             stages = [.. stages.OrderByDescending(s => s.StageOrder)];
 
-        var bestRoute = best.Route;
+        var bestRoute = bestScored.Route;
 
         // 3. Fetch full stop sequence from Chalo
         HttpResponseMessage detailRes;
@@ -240,6 +253,7 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             stopsMatched   = matched,
             chaloRouteId   = bestRoute.RouteId,
             chaloDirection = bestRoute.DirectionStopName,
+            directionFlipped = needsFlip,
         });
     }
 
