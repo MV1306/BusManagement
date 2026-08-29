@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { routesApi, stopsApi, geocodingApi, type Route, type RouteStage, type RouteStop, type Stop } from '../api';
+import { routesApi, stopsApi, geocodingApi, mtcApi, type Route, type RouteStage, type RouteStop, type Stop } from '../api';
 import { useToast, useConfirm, usePrompt } from '../toast';
 import StopAutocomplete from '../components/StopAutocomplete';
 import Pagination from '../components/Pagination';
@@ -38,6 +38,103 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── MTC Import Panel ────────────────────────────────────────────────────
+
+interface MtcImportPanelProps {
+  routeCode: string;
+  existingCount: number;
+  onImport: (stages: { order: number; name: string }[]) => Promise<void>;
+}
+
+function MtcImportPanel({ routeCode, existingCount, onImport }: MtcImportPanelProps) {
+  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState(routeCode);
+  const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [fetched, setFetched] = useState<{ order: number; name: string }[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const handleFetch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true); setFetched(null); setError(null);
+    try {
+      const result = await mtcApi.getStages(input.trim());
+      setFetched(result.stages);
+    } catch {
+      setError(`No stages found for "${input.trim()}" on the MTC website.`);
+    } finally { setLoading(false); }
+  };
+
+  const handleImport = async () => {
+    if (!fetched) return;
+    setImporting(true);
+    try {
+      await onImport(fetched);
+      setOpen(false); setFetched(null); setError(null);
+    } catch { toast('Import failed.', 'error'); }
+    finally { setImporting(false); }
+  };
+
+  if (!open) return (
+    <div style={{ marginBottom: 12 }}>
+      <button type="button" className="btn btn-subtle btn-sm" onClick={() => { setOpen(true); setInput(routeCode); setFetched(null); setError(null); }}>
+        ⬇ Import Stages from MTC
+      </button>
+    </div>
+  );
+
+  return (
+    <div style={{ marginBottom: 16, padding: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <span style={{ fontWeight: 600, fontSize: 13 }}>Import Stages from MTC Website</span>
+        <button type="button" className="btn btn-subtle btn-sm" onClick={() => { setOpen(false); setFetched(null); setError(null); }}>✕</button>
+      </div>
+
+      {existingCount > 0 && (
+        <div style={{ marginBottom: 10, padding: '6px 10px', background: 'var(--warning-bg, #fff3cd)', border: '1px solid var(--warning-border, #ffc107)', borderRadius: 6, fontSize: 12, color: 'var(--warning-text, #856404)' }}>
+          ⚠ This route already has {existingCount} stage(s). Imported stages will be appended after them.
+        </div>
+      )}
+
+      <form onSubmit={handleFetch} style={{ display: 'flex', gap: 8, marginBottom: fetched || error ? 12 : 0 }}>
+        <input
+          value={input}
+          onChange={e => { setInput(e.target.value.toUpperCase()); setFetched(null); setError(null); }}
+          placeholder="MTC route code e.g. 104"
+          style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13 }}
+        />
+        <button type="submit" className="btn btn-subtle btn-sm" disabled={loading || !input.trim()}>
+          {loading ? 'Fetching…' : 'Fetch'}
+        </button>
+      </form>
+
+      {error && <div style={{ fontSize: 12, color: 'var(--error-text, #721c24)', marginBottom: 8 }}>{error}</div>}
+
+      {fetched && (
+        <>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{fetched.length} stages found — preview:</div>
+          <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 6, marginBottom: 10 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+              <tbody>
+                {fetched.map(s => (
+                  <tr key={s.order} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td style={{ padding: '4px 10px', color: 'var(--text-muted)', width: 36 }}>{s.order}</td>
+                    <td style={{ padding: '4px 10px' }}>{s.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button type="button" className="btn btn-primary btn-sm" onClick={handleImport} disabled={importing}>
+            {importing ? 'Importing…' : `Import All ${fetched.length} Stages`}
+          </button>
+        </>
+      )}
+    </div>
+  );
 }
 
 // ── New Stop Modal ───────────────────────────────────────────────────────
@@ -726,6 +823,18 @@ export default function Routes() {
                   </div>
                 </div>
               </form>
+              <MtcImportPanel
+                routeCode={form.routeCode}
+                existingCount={routeStages.length}
+                onImport={async (stages) => {
+                  let order = routeStages.length + 1;
+                  for (const s of stages) {
+                    await routesApi.addStage(savedRouteId!, { stageName: s.name, stageOrder: order++ });
+                  }
+                  routesApi.getStages(savedRouteId!).then(setRouteStages);
+                  toast(`${stages.length} stages imported from MTC`, 'success');
+                }}
+              />
               <div className="table-wrap mt-16" ref={stageTableWrapRef} style={{ maxHeight: 400, overflowY: 'auto' }}>
                 <table>
                   <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}><tr><th style={{ width: 24 }}></th><th>#</th><th>Stage Name</th><th>Dist from prev</th><th></th></tr></thead>
