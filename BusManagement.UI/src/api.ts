@@ -464,3 +464,18 @@ export const exportApi = {
       return r.blob();
     }),
 };
+
+// ── MTC Scraper ───────────────────────────────────────────────────────────
+
+export interface MtcStage { order: number; name: string; }
+export interface MtcRouteInfo {
+  routeCode: string;
+  origin: string;
+  destination: string;
+  totalStages: number;
+  stages: MtcStage[];
+}
+
+export const mtcApi = {
+  getStages: (route: string) => req<MtcRouteInfo>(`/mtc/stages?route=${encodeURIComponent(route)}`),
+};

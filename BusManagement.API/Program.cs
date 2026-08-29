@@ -29,6 +29,12 @@ builder.Services.AddCors(
 
 builder.Services.AddMemoryCache();
 
+builder.Services.AddHttpClient("MtcScraper", client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0");
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
+
 builder.Services.AddDbContext<BusManagementDbContext>(
     options => options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"))
 );
