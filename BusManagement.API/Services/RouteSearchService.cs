@@ -23,8 +23,15 @@ public class RouteSearchService(BusManagementDbContext db)
                 BoardingStopOrder = r.RouteStops.Where(rs => rs.StopId == fromStopId).Select(rs => rs.StopOrder).First(),
                 DestStopOrder = r.RouteStops.Where(rs => rs.StopId == toStopId).Select(rs => rs.StopOrder).First(),
                 TotalStops = r.RouteStops.Count,
-                AllStops = r.RouteStops.OrderBy(rs => rs.StopOrder).Select(rs => new { rs.StopOrder, rs.DistanceFromPreviousKm }).ToList(),
-                BusTypes = r.RouteBusTypes.Select(bt => bt.BusType.ToString()).ToList()
+                AllStops = r.RouteStops.OrderBy(rs => rs.StopOrder).Select(rs => new
+                {
+                    rs.StopOrder, rs.DistanceFromPreviousKm, rs.Stop.StopName,
+                    rs.Stop.Latitude, rs.Stop.Longitude
+                }).ToList(),
+                BusTypes = r.RouteBusTypes.Select(bt => bt.BusType.ToString()).ToList(),
+                StageFirstOrders = r.RouteStages
+                    .Select(st => st.RouteStops.Min(rs => rs.StopOrder))
+                    .ToList()
             })
             .ToListAsync();
 
@@ -32,12 +39,22 @@ public class RouteSearchService(BusManagementDbContext db)
         {
             int minOrder = Math.Min(r.BoardingStopOrder, r.DestStopOrder);
             int maxOrder = Math.Max(r.BoardingStopOrder, r.DestStopOrder);
+            bool forward = r.BoardingStopOrder <= r.DestStopOrder;
             double distKm = Math.Round(r.AllStops
                 .Where(s => s.StopOrder > minOrder && s.StopOrder <= maxOrder)
                 .Sum(s => s.DistanceFromPreviousKm), 2);
             int stops = maxOrder - minOrder + 1;
+            var sliced = r.AllStops
+                .Where(s => s.StopOrder >= minOrder && s.StopOrder <= maxOrder)
+                .OrderBy(s => forward ? s.StopOrder : -s.StopOrder)
+                .ToList();
+            var stageStops = sliced.Select(s => s.StopName).ToList();
+            var stageFirstSet = r.StageFirstOrders.ToHashSet();
+            var stopCoords = sliced.Select(s => new StopCoord(
+                s.StopName, s.Latitude, s.Longitude,
+                stageFirstSet.Contains(s.StopOrder))).ToList();
             return new DirectRouteResult(r.RouteId, r.RouteCode, r.RouteName,
-                r.BoardingStopOrder, r.DestStopOrder, stops, distKm, null, r.BusTypes);
+                r.BoardingStopOrder, r.DestStopOrder, stops, distKm, null, r.BusTypes, stageStops, stopCoords);
         }).ToList();
 
         return new RouteSearchResponse(fromStop.StopName, toStop.StopName, validRoutes);

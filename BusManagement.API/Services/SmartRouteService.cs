@@ -46,23 +46,41 @@ public class SmartRouteService(BusManagementDbContext db, IMemoryCache cache)
         var segments = algo.FindPath(fromStopId, toStopId, criteria);
         if (segments is null) return null;
 
-        // Load stop names for all stop IDs in path
+        // Load stop names + coords for all stop IDs in path
         var allStopIds = segments.SelectMany(s => s.SelectMany(e => new[] { e.FromStopId, e.ToStopId })).Distinct().ToList();
-        var stopNames = await db.Stops
+        var stopData = await db.Stops
             .Where(s => allStopIds.Contains(s.StopId))
-            .ToDictionaryAsync(s => s.StopId, s => s.StopName);
+            .ToDictionaryAsync(s => s.StopId, s => new { s.StopName, s.Latitude, s.Longitude });
 
-        var resultSegments = segments.Select(seg => new RouteSegment(
-            seg[0].RouteId,
-            seg[0].RouteCode,
-            seg[0].RouteName,
-            seg[0].FromStopId,
-            stopNames.GetValueOrDefault(seg[0].FromStopId, ""),
-            seg[^1].ToStopId,
-            stopNames.GetValueOrDefault(seg[^1].ToStopId, ""),
-            seg.Count + 1,
-            Math.Round(seg.Sum(e => e.DistanceKm), 2)
-        )).ToList();
+        // Load stage first-stop orders per route for stage boundary detection
+        var routeIds = segments.Select(s => s[0].RouteId).Distinct().ToList();
+        var stageFirstOrders = await db.RouteStops
+            .Where(rs => routeIds.Contains(rs.RouteId))
+            .GroupBy(rs => new { rs.RouteId, rs.RouteStageId })
+            .Select(g => new { g.Key.RouteId, MinOrder = g.Min(rs => rs.StopOrder) })
+            .ToListAsync();
+        var stageFirstByRoute = stageFirstOrders
+            .GroupBy(x => x.RouteId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.MinOrder).ToHashSet());
+
+        var resultSegments = segments.Select(seg =>
+        {
+            var stageFirstSet = stageFirstByRoute.GetValueOrDefault(seg[0].RouteId, []);
+            var lastStop = stopData.GetValueOrDefault(seg[^1].ToStopId);
+            var stopCoords = seg.Select(e =>
+            {
+                var s = stopData.GetValueOrDefault(e.FromStopId);
+                return new StopCoord(s?.StopName ?? "", s?.Latitude, s?.Longitude, stageFirstSet.Contains(e.StopOrder));
+            }).Append(new StopCoord(lastStop?.StopName ?? "", lastStop?.Latitude, lastStop?.Longitude, false))
+              .ToList();
+            return new RouteSegment(
+                seg[0].RouteId, seg[0].RouteCode, seg[0].RouteName,
+                seg[0].FromStopId, stopData.GetValueOrDefault(seg[0].FromStopId)?.StopName ?? "",
+                seg[^1].ToStopId, stopData.GetValueOrDefault(seg[^1].ToStopId)?.StopName ?? "",
+                seg.Count + 1,
+                Math.Round(seg.Sum(e => e.DistanceKm), 2),
+                stopCoords);
+        }).ToList();
 
         return new SmartRouteResponse(
             fromStop.StopName,

@@ -300,14 +300,23 @@
 }
 .rs-route-item:hover { background: var(--surface-3); }
 
-.rs-route-left  { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.rs-route-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rs-route-left  { display: flex; align-items: flex-start; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.rs-route-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex-shrink: 0; }
 .rs-route-path  { display: flex; align-items: center; gap: 6px; }
 .rs-route-stop  { font-weight: 600; color: var(--text); font-size: 0.875rem; }
 .rs-route-arrow { color: var(--teal); }
 .rs-route-stat  { display: flex; flex-direction: column; align-items: center; font-size: 0.72rem; }
 .rs-route-stat span:first-child { font-weight: 700; color: var(--text); font-size: 0.9rem; }
 .rs-route-stat span:last-child  { color: var(--text-3); }
+
+.rs-stage-chain {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px;
+  font-size: 0.78rem; line-height: 1.4;
+}
+.rs-stage-item  { display: flex; align-items: center; gap: 2px; }
+.rs-stage-arrow { color: var(--text-3); font-size: 0.7rem; margin: 0 1px; }
+.rs-stage-stop  { color: var(--text-2); }
+.rs-stage-terminal { font-weight: 700; color: var(--text); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 

@@ -82,6 +82,13 @@ export interface Fare {
   isActive: boolean;
 }
 
+export interface StopCoord {
+  name: string;
+  lat?: number | null;
+  lng?: number | null;
+  isStageStart: boolean;
+}
+
 export interface SearchResult {
   fromStop: string;
   toStop: string;
@@ -95,6 +102,7 @@ export interface SearchResult {
     distanceKm: number;
     fare: number | null;
     busTypes: BusType[];
+    stopCoords: StopCoord[];
   }[];
 }
 
@@ -111,6 +119,7 @@ export interface SmartSearchResult {
     toStop: string;
     stops: number;
     distanceKm: number;
+    stopCoords: StopCoord[];
   }[];
 }
 

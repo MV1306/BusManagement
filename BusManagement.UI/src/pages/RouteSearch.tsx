@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { routesApi, stopsApi, type SearchResult, type SmartSearchResult, type Stop, type BusType } from '../api';
+import { routesApi, stopsApi, type SearchResult, type SmartSearchResult, type Stop, type BusType, type StopCoord } from '../api';
 import { useToast } from '../toast';
 import StopAutocomplete from '../components/StopAutocomplete';
 
@@ -68,41 +68,76 @@ export default function RouteSearch() {
     if (mapInstanceRef.current) { mapInstanceRef.current.remove(); mapInstanceRef.current = null; }
     if (!directResult && !smartResult) return;
 
-    const byName = (name: string) => stops.find(s => s.stopName.toLowerCase() === name.toLowerCase());
-    const points: { ll: L.LatLngTuple; label: string; color: string }[] = [];
+    type SegmentLayer = { coords: StopCoord[]; color: string; routeCode: string };
+    const layers: SegmentLayer[] = [];
+
+    const SEGMENT_COLORS = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#e11d48'];
 
     if (directResult?.routes.length) {
-      const from = byName(directResult.fromStop);
-      const to   = byName(directResult.toStop);
-      if (from?.latitude && from?.longitude) points.push({ ll: [from.latitude, from.longitude], label: from.stopName, color: '#16a34a' });
-      if (to?.latitude   && to?.longitude)   points.push({ ll: [to.latitude,   to.longitude],   label: to.stopName,   color: '#2563eb' });
-    }
-
-    if (smartResult) {
-      smartResult.segments.forEach((seg, i) => {
-        const from = byName(seg.fromStop);
-        const to   = byName(seg.toStop);
-        if (from?.latitude && from?.longitude)
-          points.push({ ll: [from.latitude, from.longitude], label: seg.fromStop, color: i === 0 ? '#16a34a' : '#d97706' });
-        if (to?.latitude && to?.longitude)
-          points.push({ ll: [to.latitude, to.longitude], label: seg.toStop, color: i === smartResult.segments.length - 1 ? '#2563eb' : '#d97706' });
+      directResult.routes.forEach((r, i) => {
+        if (r.stopCoords?.length) {
+          layers.push({ coords: r.stopCoords, color: SEGMENT_COLORS[i % SEGMENT_COLORS.length], routeCode: r.routeCode });
+        }
       });
     }
 
-    const unique = points.filter((p, i) => points.findIndex(q => q.label === p.label) === i);
-    if (!unique.length) return;
+    if (smartResult?.segments.length) {
+      smartResult.segments.forEach((seg, i) => {
+        if (seg.stopCoords?.length) {
+          layers.push({ coords: seg.stopCoords, color: SEGMENT_COLORS[i % SEGMENT_COLORS.length], routeCode: seg.routeCode });
+        }
+      });
+    }
+
+    const validCoords = layers.flatMap(l => l.coords.filter(c => c.lat != null && c.lng != null));
+    if (!validCoords.length) return;
 
     const map = L.map(mapRef.current);
     mapInstanceRef.current = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(map);
-    unique.forEach(({ ll, label, color }) => {
-      L.circleMarker(ll, { radius: 9, fillColor: color, color: '#fff', weight: 2, fillOpacity: 1 }).bindPopup(`<b>${label}</b>`).addTo(map);
-      L.tooltip({ permanent: true, direction: 'top', offset: [0, -12], className: 'stop-label' }).setContent(label).setLatLng(ll).addTo(map);
+
+    layers.forEach(({ coords, color, routeCode }, layerIdx) => {
+      const pts = coords.filter(c => c.lat != null && c.lng != null) as (StopCoord & { lat: number; lng: number })[];
+      if (!pts.length) return;
+
+      // Draw polyline through all stops
+      L.polyline(pts.map(p => [p.lat, p.lng] as L.LatLngTuple), {
+        color, weight: 4, opacity: 0.85,
+        dashArray: layerIdx > 0 ? '10,6' : undefined,
+      }).addTo(map);
+
+      pts.forEach((p, i) => {
+        const isFirst = layerIdx === 0 && i === 0;
+        const isLast = layerIdx === layers.length - 1 && i === pts.length - 1;
+        const isTransfer = !isFirst && !isLast && i === 0;
+        const isStageStart = p.isStageStart && !isFirst && !isLast;
+
+        if (isFirst || isLast || isTransfer) {
+          const markerColor = isFirst ? '#16a34a' : isLast ? '#2563eb' : '#d97706';
+          L.circleMarker([p.lat, p.lng], {
+            radius: 9, fillColor: markerColor, color: '#fff', weight: 2, fillOpacity: 1,
+          }).bindPopup(`<b>${p.name}</b>${isTransfer ? '<br/><i>Transfer point</i>' : ''}`).addTo(map);
+          L.tooltip({ permanent: true, direction: 'top', offset: [0, -12], className: 'stop-label' })
+            .setContent(p.name).setLatLng([p.lat, p.lng]).addTo(map);
+        } else if (isStageStart) {
+          // Stage boundary: diamond marker
+          L.circleMarker([p.lat, p.lng], {
+            radius: 6, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.9,
+          }).bindPopup(`<b>${p.name}</b><br/><i>Stage start</i>`).addTo(map);
+          L.tooltip({ permanent: true, direction: 'top', offset: [0, -10], className: 'stop-label stop-label-stage' })
+            .setContent(p.name).setLatLng([p.lat, p.lng]).addTo(map);
+        } else {
+          // Intermediate stop: small dot
+          L.circleMarker([p.lat, p.lng], {
+            radius: 4, fillColor: color, color: '#fff', weight: 1.5, fillOpacity: 0.75,
+          }).bindPopup(`<b>${p.name}</b><br/><small>${routeCode}</small>`).addTo(map);
+        }
+      });
     });
-    if (unique.length > 1)
-      L.polyline(unique.map(p => p.ll), { color: '#2563eb', weight: 3, opacity: 0.7, dashArray: smartResult?.transfers ? '8,6' : undefined }).addTo(map);
-    map.fitBounds(L.latLngBounds(unique.map(p => p.ll)), { padding: [50, 50] });
-  }, [directResult, smartResult, stops]);
+
+    const allPts = validCoords.map(c => [c.lat!, c.lng!] as L.LatLngTuple);
+    map.fitBounds(L.latLngBounds(allPts), { padding: [50, 50] });
+  }, [directResult, smartResult]);
 
   const switchMode = (m: Mode) => {
     setMode(m); setFromId(''); setToId('');
@@ -217,10 +252,14 @@ export default function RouteSearch() {
                 <div key={r.routeId} className="rs-route-item">
                   <div className="rs-route-left">
                     <span className="route-badge">{r.routeCode}</span>
-                    <div className="rs-route-path">
-                      <span className="rs-route-stop">{directResult.fromStop}</span>
-                      <span className="rs-route-arrow">→</span>
-                      <span className="rs-route-stop">{directResult.toStop}</span>
+                    <div className="rs-stage-chain">
+                      {r.stopCoords?.filter((s, i) => i === 0 || i === r.stopCoords.length - 1 || s.isStageStart)
+                        .map((s, i, arr) => (
+                          <span key={i} className="rs-stage-item">
+                            {i > 0 && <span className="rs-stage-arrow">›</span>}
+                            <span className={i === 0 || i === arr.length - 1 ? 'rs-stage-stop rs-stage-terminal' : 'rs-stage-stop'}>{s.name}</span>
+                          </span>
+                        ))}
                     </div>
                     <BusTypePills types={r.busTypes} />
                   </div>

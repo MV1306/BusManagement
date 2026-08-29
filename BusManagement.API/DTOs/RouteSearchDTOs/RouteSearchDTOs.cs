@@ -1,5 +1,7 @@
 namespace BusManagement.API.DTOs.RouteSearchDTOs;
 
+public record StopCoord(string Name, double? Lat, double? Lng, bool IsStageStart);
+
 public record RouteSearchResponse(
     string FromStop,
     string ToStop,
@@ -14,7 +16,9 @@ public record DirectRouteResult(
     int Stops,
     double DistanceKm,
     decimal? Fare,
-    List<string> BusTypes);
+    List<string> BusTypes,
+    List<string> StageStops,
+    List<StopCoord> StopCoords);
 
 public record SmartRouteResponse(
     string From,
@@ -33,4 +37,5 @@ public record RouteSegment(
     int ToStopId,
     string ToStop,
     int Stops,
-    double DistanceKm);
+    double DistanceKm,
+    List<StopCoord> StopCoords);
