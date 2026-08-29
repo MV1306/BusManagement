@@ -163,6 +163,19 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         if (chaloStops is null || chaloStops.Count == 0)
             return NotFound(new { message = "No stops found in Chalo response." });
 
+        // Check if chaloStops are in reverse order relative to MTC stages
+        // Compare first/last Chalo stop name against MTC first/last stage name
+        var chaloFirst = NormalizeStopName(chaloStops.First().StopName);
+        var chaloLast  = NormalizeStopName(chaloStops.Last().StopName);
+        var mtcFirst   = NormalizeStopName(stages.First().StageName);
+        var mtcLast    = NormalizeStopName(stages.Last().StageName);
+
+        int forwardFit = NameSimilarity(chaloFirst, mtcFirst) + NameSimilarity(chaloLast, mtcLast);
+        int reverseFit = NameSimilarity(chaloFirst, mtcLast)  + NameSimilarity(chaloLast, mtcFirst);
+
+        if (reverseFit > forwardFit)
+            chaloStops = [.. chaloStops.AsEnumerable().Reverse()];
+
         // 4. Load existing stops from DB for name-matching + existing codes for uniqueness
         var existingStops = await db.Stops.ToListAsync();
         var existingCodes = existingStops.Select(s => s.StopCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -251,9 +264,12 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             totalStops     = chaloStops.Count,
             stopsCreated   = created,
             stopsMatched   = matched,
-            chaloRouteId   = bestRoute.RouteId,
-            chaloDirection = bestRoute.DirectionStopName,
+            chaloRouteId     = bestRoute.RouteId,
+            chaloDirection   = bestRoute.DirectionStopName,
             directionFlipped = needsFlip,
+            stopsReversed    = reverseFit > forwardFit,
+            chaloFirstStop   = chaloStops.First().StopName,
+            chaloLastStop    = chaloStops.Last().StopName,
         });
     }
 
