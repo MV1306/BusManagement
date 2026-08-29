@@ -170,8 +170,8 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         var mtcFirst   = NormalizeStopName(stages.First().StageName);
         var mtcLast    = NormalizeStopName(stages.Last().StageName);
 
-        int forwardFit = NameSimilarity(chaloFirst, mtcFirst) + NameSimilarity(chaloLast, mtcLast);
-        int reverseFit = NameSimilarity(chaloFirst, mtcLast)  + NameSimilarity(chaloLast, mtcFirst);
+        int forwardFit = NameSimilarity(chaloStops.First().StopName, stages.First().StageName) + NameSimilarity(chaloStops.Last().StopName, stages.Last().StageName);
+        int reverseFit = NameSimilarity(chaloStops.First().StopName, stages.Last().StageName)  + NameSimilarity(chaloStops.Last().StopName, stages.First().StageName);
 
         if (reverseFit > forwardFit)
             chaloStops = [.. chaloStops.AsEnumerable().Reverse()];
@@ -270,6 +270,14 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             stopsReversed    = reverseFit > forwardFit,
             chaloFirstStop   = chaloStops.First().StopName,
             chaloLastStop    = chaloStops.Last().StopName,
+            debug = new {
+                mtcFirstStage    = stages.First().StageName,
+                mtcLastStage     = stages.Last().StageName,
+                rawChaloFirst    = detail!.Route!.StopSequence.First().StopName,
+                rawChaloLast     = detail!.Route!.StopSequence.Last().StopName,
+                forwardFit,
+                reverseFit,
+            },
         });
     }
 
