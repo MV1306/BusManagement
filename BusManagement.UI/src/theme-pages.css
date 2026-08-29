@@ -24,8 +24,8 @@
   flex-shrink: 0;
   z-index: 1;
 }
-.timeline-dot.first { background: var(--green);   border-color: var(--green);   box-shadow: 0 0 8px rgba(16,185,129,.4); }
-.timeline-dot.last  { background: var(--primary);  border-color: var(--primary); box-shadow: 0 0 8px rgba(79,70,229,.4); }
+.timeline-dot.first { background: var(--green);   border-color: var(--green);   box-shadow: 0 0 8px rgba(90,158,111,.4); }
+.timeline-dot.last  { background: var(--primary);  border-color: var(--primary); box-shadow: 0 0 8px rgba(194,105,42,.4); }
 .timeline-dot.mid   { background: var(--surface-2); border-color: var(--border-strong); }
 
 .timeline-line {
@@ -84,7 +84,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 18px 20px;
+  padding: 20px 22px;
   position: relative;
   overflow: hidden;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -95,21 +95,22 @@
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--primary), var(--cyan));
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--amber));
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .dash-stat-label {
   font-size: 0.68rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-3);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   margin-bottom: 10px;
 }
 
 .dash-stat-value {
-  font-size: 1.8rem;
+  font-size: 1.9rem;
   font-weight: 700;
   color: var(--text);
   line-height: 1.1;
@@ -181,7 +182,7 @@
   letter-spacing: 0.04em;
 }
 
-.segment-arrow { color: var(--cyan); font-size: 1rem; }
+.segment-arrow { color: var(--teal); font-size: 1rem; }
 .segment-stop  { font-weight: 600; color: var(--text); }
 
 /* ── Route Search ── */
@@ -221,7 +222,7 @@
   align-items: center;
   gap: 6px;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-2);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -268,7 +269,7 @@
 .rs-criteria-btn.active { border-color: var(--primary); background: var(--primary-dim); }
 .rs-criteria-label { font-size: 0.8rem; font-weight: 700; color: var(--text); }
 .rs-criteria-desc  { font-size: 0.68rem; color: var(--text-3); }
-.rs-criteria-btn.active .rs-criteria-label { color: #a5b4fc; }
+.rs-criteria-btn.active .rs-criteria-label { color: var(--primary-light); }
 
 .rs-search-footer { display: flex; align-items: center; gap: 10px; }
 
@@ -303,7 +304,7 @@
 .rs-route-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .rs-route-path  { display: flex; align-items: center; gap: 6px; }
 .rs-route-stop  { font-weight: 600; color: var(--text); font-size: 0.875rem; }
-.rs-route-arrow { color: var(--cyan); }
+.rs-route-arrow { color: var(--teal); }
 .rs-route-stat  { display: flex; flex-direction: column; align-items: center; font-size: 0.72rem; }
 .rs-route-stat span:first-child { font-weight: 700; color: var(--text); font-size: 0.9rem; }
 .rs-route-stat span:last-child  { color: var(--text-3); }
@@ -417,7 +418,7 @@
 .fc-segment-left  { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .fc-segment-right { display: flex; align-items: center; gap: 12px; }
 .fc-seg-stop  { font-weight: 600; color: var(--text); font-size: 0.875rem; }
-.fc-seg-arrow { color: var(--cyan); }
+.fc-seg-arrow { color: var(--teal); }
 .fc-seg-fare  { font-weight: 700; font-size: 1rem; color: var(--green); }
 .fc-seg-fare.na { color: var(--text-3); }
 
@@ -457,7 +458,7 @@
 }
 
 .leaflet-container { background: var(--bg) !important; }
-.leaflet-tile { filter: brightness(0.75) saturate(0.7); }
+.leaflet-tile { filter: brightness(0.72) saturate(0.6) sepia(0.2); }
 .leaflet-popup-content-wrapper {
   background: var(--surface) !important;
   border: 1px solid var(--border-strong) !important;
@@ -467,7 +468,18 @@
 }
 .leaflet-popup-tip { background: var(--surface) !important; }
 
-[data-theme="light"] .leaflet-tile { filter: none; }
-[data-theme="light"] .leaflet-container { background: #e8edf2 !important; }
-[data-theme="light"] .leaflet-popup-content-wrapper { background: #fff !important; color: #111827 !important; }
-[data-theme="light"] .stop-label { background: #fff !important; color: #111827 !important; }
+[data-theme="light"] .leaflet-tile { filter: sepia(0.15) saturate(0.85); }
+[data-theme="light"] .leaflet-container { background: #ede8df !important; }
+[data-theme="light"] .leaflet-popup-content-wrapper { background: #fff !important; color: #2c1f10 !important; }
+[data-theme="light"] .stop-label { background: #fff !important; color: #2c1f10 !important; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .dash-stats-grid { grid-template-columns: 1fr 1fr; }
+  .form-row { flex-direction: column; }
+  .form-group { min-width: unset; }
+  .summary-row { gap: 8px; }
+  .summary-item { min-width: 80px; padding: 10px 12px; }
+  .card { padding: 16px; }
+  .health-bar-label { width: 140px; font-size: 0.72rem; }
+}

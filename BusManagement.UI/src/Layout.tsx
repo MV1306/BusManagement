@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTheme } from './theme';
 import { useKeyboardShortcuts } from './shortcuts';
+import './index.css';
 
 const navItems = [
   { section: 'Overview' },
@@ -45,60 +46,39 @@ export default function Layout() {
   const { pathname } = useLocation();
   const { theme, toggle } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('nav-collapsed') === '1');
   const base = '/' + pathname.split('/')[1];
   const page = titles[base] ?? { label: 'TransitOps', icon: <BusIcon /> };
 
   useKeyboardShortcuts();
 
-  const toggleCollapse = () => setCollapsed(v => {
-    localStorage.setItem('nav-collapsed', v ? '0' : '1');
-    return !v;
-  });
-
   return (
     <div className="layout">
-      {sidebarOpen && <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />}
-
-      <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}${collapsed ? ' sidebar-collapsed' : ''}`}>
-        <div className="sidebar-brand">
-          <div className="sidebar-brand-icon"><BusIcon /></div>
-          {!collapsed && <div style={{ flex: 1 }}>
-            <div className="sidebar-brand-text">TransitOps</div>
-            <div className="sidebar-brand-sub">MTC · Chennai</div>
-          </div>}
-          <button className="sidebar-close" onClick={() => setSidebarOpen(false)} aria-label="Close menu">✕</button>
-        </div>
+      <aside className={`sidebar${sidebarOpen ? ' sidebar-open' : ''}`}>
+        <div className="sidebar-brand" title="TransitOps"><BusIcon /></div>
 
         <nav>
           {navItems.map((item, i) =>
             'section' in item
-              ? (!collapsed && <div key={i} className="nav-section">{item.section}</div>)
+              ? <div key={i} className="nav-section" />
               : (
                 <NavLink key={item.to} to={item.to} onClick={() => setSidebarOpen(false)}
-                  title={collapsed ? item.label : undefined}
+                  title={item.label}
                   className={({ isActive }) => isActive ? 'active' : ''}>
                   <span className="nav-icon">{item.icon}</span>
-                  {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-                  {!collapsed && <span className="nav-shortcut">{item.key}</span>}
                 </NavLink>
               )
           )}
         </nav>
 
         <div className="sidebar-footer">
-          <span className="sidebar-footer-dot" />
-          {!collapsed && <span className="sidebar-footer-text">System Online</span>}
+          <span className="sidebar-footer-dot" title="System Online" />
         </div>
       </aside>
 
-      <div className="main" style={{ marginLeft: collapsed ? 56 : undefined }}>
+      <div className="main">
         <div className="topbar">
-          <button className="hamburger" onClick={() => setSidebarOpen(true)} aria-label="Open menu">
+          <button className="hamburger" onClick={() => setSidebarOpen(v => !v)} aria-label="Open menu">
             <HamburgerIcon />
-          </button>
-          <button className="sidebar-collapse-btn" onClick={toggleCollapse} title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            <CollapseIcon collapsed={collapsed} />
           </button>
 
           <span style={{ color: 'var(--primary-light)', display: 'flex' }}>{page.icon}</span>
@@ -120,11 +100,6 @@ export default function Layout() {
   );
 }
 
-function CollapseIcon({ collapsed }: { collapsed: boolean }) {
-  return collapsed
-    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
-    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>;
-}
 function BusIcon()       { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><path d="M2 13h20"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/></svg>; }
 function DashIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>; }
 function StopIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>; }
