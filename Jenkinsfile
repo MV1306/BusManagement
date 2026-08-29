@@ -3,7 +3,9 @@ pipeline {
 
     environment {
         DOTNET_CLI_TELEMETRY_OPTOUT = '1'
-        NODE_ENV                    = 'development'
+        NODE_ENV                    = 'production'
+
+        VITE_API_BASE   = 'https://192.168.29.141/TransitOpsAPI/api'
 
         API_APPPOOL     = 'TransitOpsAPI'
         UI_APPPOOL      = 'TransitOpsUI'
