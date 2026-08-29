@@ -478,4 +478,14 @@ export interface MtcRouteInfo {
 
 export const mtcApi = {
   getStages: (route: string) => req<MtcRouteInfo>(`/mtc/stages?route=${encodeURIComponent(route)}`),
+  importStops: (routeId: number) => req<MtcImportResult>(`/mtc/import-stops/${routeId}`, { method: 'POST' }),
 };
+
+export interface MtcImportResult {
+  message: string;
+  totalStops: number;
+  stopsCreated: number;
+  stopsMatched: number;
+  chaloRouteId: string;
+  chaloDirection: string;
+}

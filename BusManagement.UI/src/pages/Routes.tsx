@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import * as XLSX from 'xlsx';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { routesApi, stopsApi, geocodingApi, mtcApi, type Route, type RouteStage, type RouteStop, type Stop } from '../api';
+import { routesApi, stopsApi, geocodingApi, mtcApi, type Route, type RouteStage, type RouteStop, type Stop, type MtcImportResult } from '../api';
 import { useToast, useConfirm, usePrompt } from '../toast';
 import StopAutocomplete from '../components/StopAutocomplete';
 import Pagination from '../components/Pagination';
@@ -38,6 +38,60 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
   const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Chalo Stop Import Panel ──────────────────────────────────────────────────
+
+function ChaloImportPanel({ routeId, hasStages, onImported }: { routeId: number; hasStages: boolean; onImported: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<MtcImportResult | null>(null);
+  const { toast } = useToast();
+
+  if (!hasStages) return null;
+
+  const handleImport = async () => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const res = await mtcApi.importStops(routeId);
+      setResult(res);
+      onImported();
+      toast(res.message, 'success');
+    } catch {
+      toast('Failed to import stops from Chalo. Route may not exist on Chalo.', 'error');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div style={{ marginBottom: 16, padding: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13 }}>Import Stops from Chalo</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            Fetches stop sequence with coordinates from Chalo, creates missing stops, and assigns them to this route.
+          </div>
+        </div>
+        <button type="button" className="btn btn-primary btn-sm" onClick={handleImport} disabled={loading}>
+          {loading ? 'Importing…' : '⬇ Import Stops from Chalo'}
+        </button>
+      </div>
+      {result && (
+        <div style={{ marginTop: 10, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Total Stops', value: result.totalStops },
+            { label: 'Created', value: result.stopsCreated },
+            { label: 'Matched', value: result.stopsMatched },
+            { label: 'Direction', value: result.chaloDirection },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ padding: '6px 12px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12 }}>
+              <div style={{ color: 'var(--text-muted)' }}>{label}</div>
+              <div style={{ fontWeight: 600 }}>{value}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── MTC Import Panel ────────────────────────────────────────────────────
@@ -873,6 +927,11 @@ export default function Routes() {
                 ? <div className="text-muted" style={{ padding: '12px 0' }}>Add stages first before mapping stops.</div>
                 : (
                   <>
+                    <ChaloImportPanel
+                      routeId={savedRouteId!}
+                      hasStages={routeStages.length > 0}
+                      onImported={() => routesApi.getStops(savedRouteId!).then(setRouteStops)}
+                    />
                     <form onSubmit={handleAddStop}>
                       <div className="form-row">
                         <div className="form-group">
