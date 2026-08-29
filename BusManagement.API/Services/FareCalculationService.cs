@@ -15,6 +15,11 @@ public class FareCalculationService(BusManagementDbContext db)
         if (route is null || !lookup.TryGetValue(fromStopId, out var fromStop) || !lookup.TryGetValue(toStopId, out var toStop))
             return null;
 
+        // Validate bus type is assigned to this route (if any assignments exist)
+        var assignedTypes = await db.RouteBusTypes.Where(r => r.RouteId == routeId).Select(r => r.BusType).ToListAsync();
+        if (assignedTypes.Count > 0 && !assignedTypes.Contains(busType))
+            return null;
+
         var (stages, totalStops, distKm) = await GetStagesAndDistanceAsync(routeId, fromStopId, toStopId);
 
         var fare = await db.Fares
@@ -35,11 +40,15 @@ public class FareCalculationService(BusManagementDbContext db)
 
         var (stages, totalStops, distKm) = await GetStagesAndDistanceAsync(routeId, fromStopId, toStopId);
 
+        // Only include bus types assigned to this route; fall back to all types if none assigned
+        var assignedTypes = await db.RouteBusTypes.Where(r => r.RouteId == routeId).Select(r => r.BusType).ToListAsync();
+        var typesToShow = assignedTypes.Count > 0 ? assignedTypes : Enum.GetValues<BusType>().ToList();
+
         var fareRecords = await db.Fares
             .Where(f => f.Stages == stages && f.IsActive)
             .ToListAsync();
 
-        var allTypes = Enum.GetValues<BusType>().Select(bt =>
+        var allTypes = typesToShow.Order().Select(bt =>
         {
             var fareAmount = fareRecords.FirstOrDefault(f => f.BusType == bt)?.FareAmount ?? 0;
             return new FareByTypeResult(bt, stages, totalStops, distKm, fareAmount);

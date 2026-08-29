@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { faresApi, routesApi, stopsApi, BUS_TYPES, type BusType, type FareCalcAllTypesResult, type Route, type RouteStop, type SmartFareResult, type Stop } from '../api';
+import { faresApi, routesApi, routeBusTypesApi, stopsApi, BUS_TYPES, type BusType, type FareCalcAllTypesResult, type Route, type RouteStop, type SmartFareResult, type Stop } from '../api';
 import { useToast } from '../toast';
 import StopAutocomplete from '../components/StopAutocomplete';
 
@@ -84,15 +84,30 @@ function useRouteAC(routes: Route[], onSelect?: () => void) {
   return { selectedId, Input, reset };
 }
 
+const BUS_TYPE_COLORS: Record<BusType, string> = {
+  Ordinary: '#e8e8e8',
+  Express:  '#4caf50',
+  Deluxe:   '#2196f3',
+  AC:       '#f44336',
+};
+
 // ── Bus type pill selector ───────────────────────────────────────────────────
-function BusTypePills({ value, onChange }: { value: BusType; onChange: (v: BusType) => void }) {
+function BusTypePills({ value, onChange, allowed }: { value: BusType; onChange: (v: BusType) => void; allowed?: BusType[] }) {
+  const types = allowed?.length ? allowed : BUS_TYPES;
   return (
     <div className="fc-pills">
-      {BUS_TYPES.map(t => (
-        <button key={t} type="button"
-          className={`fc-pill${value === t ? ' active' : ''}`}
-          onClick={() => onChange(t)}>{t}</button>
-      ))}
+      {types.map(t => {
+        const color = BUS_TYPE_COLORS[t];
+        const active = value === t;
+        return (
+          <button key={t} type="button"
+            className={`fc-pill${active ? ' active' : ''}`}
+            onClick={() => onChange(t)}
+            style={active ? { background: color, borderColor: color, color: t === 'Ordinary' ? '#333' : '#fff' } : { borderColor: color, color }}>
+            {t}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -104,24 +119,26 @@ export default function FareCalculator() {
   const [mode, setMode] = useState<Mode>('route');
 
   // route mode
-  const [routeStops, setRouteStops]   = useState<RouteStop[]>([]);
-  const [fromId, setFromId]           = useState('');
-  const [toId, setToId]               = useState('');
+  const [routeStops, setRouteStops]         = useState<RouteStop[]>([]);
+  const [routeBusTypes, setRouteBusTypes]   = useState<BusType[]>([]);
+  const [fromId, setFromId]                 = useState('');
+  const [toId, setToId]                     = useState('');
   const [allTypesResult, setAllTypesResult] = useState<FareCalcAllTypesResult | null>(null);
 
   // smart mode
-  const [smartBusType, setSmartBusType] = useState<BusType>('Ordinary');
-  const [smartFromId, setSmartFromId]   = useState('');
-  const [smartToId, setSmartToId]       = useState('');
-  const [smartResult, setSmartResult]   = useState<SmartFareResult | null>(null);
+  const [smartBusType, setSmartBusType]   = useState<BusType>('Ordinary');
+  const [smartFromId, setSmartFromId]     = useState('');
+  const [smartToId, setSmartToId]         = useState('');
+  const [smartResult, setSmartResult]     = useState<SmartFareResult | null>(null);
   const [smartCriteria, setSmartCriteria] = useState<'ShortestDistance' | 'FewestStops' | 'FewestTransfers'>('ShortestDistance');
 
   // concession mode
-  const [concRouteStops, setConcRouteStops] = useState<RouteStop[]>([]);
-  const [concFromId, setConcFromId]         = useState('');
-  const [concToId, setConcToId]             = useState('');
-  const [concBusType, setConcBusType]       = useState<BusType>('Ordinary');
-  const [concResult, setConcResult]         = useState<FareCalcAllTypesResult | null>(null);
+  const [concRouteStops, setConcRouteStops]   = useState<RouteStop[]>([]);
+  const [concRouteBusTypes, setConcRouteBusTypes] = useState<BusType[]>([]);
+  const [concFromId, setConcFromId]           = useState('');
+  const [concToId, setConcToId]               = useState('');
+  const [concBusType, setConcBusType]         = useState<BusType>('Ordinary');
+  const [concResult, setConcResult]           = useState<FareCalcAllTypesResult | null>(null);
 
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
@@ -135,16 +152,37 @@ export default function FareCalculator() {
     routesApi.getAllUnpaged().then(r => setRoutes(r.items.filter(x => x.isActive)));
   }, []);
 
-  // load route stops when route selected
+  // load route stops + bus types when route selected
   useEffect(() => {
-    if (routeAC.selectedId) routesApi.getStops(Number(routeAC.selectedId)).then(setRouteStops);
-    else setRouteStops([]);
+    if (routeAC.selectedId) {
+      routesApi.getStops(Number(routeAC.selectedId)).then(setRouteStops);
+      routeBusTypesApi.getByRoute(Number(routeAC.selectedId))
+        .then(r => {
+          const types = r.map(t => t.busType);
+          setRouteBusTypes(types);
+        })
+        .catch(() => setRouteBusTypes([]));
+    } else {
+      setRouteStops([]);
+      setRouteBusTypes([]);
+    }
     setFromId(''); setToId('');
   }, [routeAC.selectedId]);
 
   useEffect(() => {
-    if (concRouteAC.selectedId) routesApi.getStops(Number(concRouteAC.selectedId)).then(setConcRouteStops);
-    else setConcRouteStops([]);
+    if (concRouteAC.selectedId) {
+      routesApi.getStops(Number(concRouteAC.selectedId)).then(setConcRouteStops);
+      routeBusTypesApi.getByRoute(Number(concRouteAC.selectedId))
+        .then(r => {
+          const types = r.map(t => t.busType);
+          setConcRouteBusTypes(types);
+          if (types.length > 0 && !types.includes(concBusType)) setConcBusType(types[0]);
+        })
+        .catch(() => setConcRouteBusTypes([]));
+    } else {
+      setConcRouteStops([]);
+      setConcRouteBusTypes([]);
+    }
     setConcFromId(''); setConcToId('');
   }, [concRouteAC.selectedId]);
 
@@ -152,10 +190,9 @@ export default function FareCalculator() {
     setMode(m);
     setError('');
     setAllTypesResult(null); setSmartResult(null); setConcResult(null);
-    // clear all fields on mode switch
-    setFromId(''); setToId(''); routeAC.reset();
+    setFromId(''); setToId(''); setRouteBusTypes([]); routeAC.reset();
     setSmartFromId(''); setSmartToId(''); setSmartCriteria('ShortestDistance');
-    setConcFromId(''); setConcToId(''); concRouteAC.reset();
+    setConcFromId(''); setConcToId(''); setConcRouteBusTypes([]); concRouteAC.reset();
   };
 
   const stopOptions = (routeStops.length ? routeStops : stops).map(rs =>
@@ -306,8 +343,10 @@ export default function FareCalculator() {
               </div>
             </div>
             <div className="form-group" style={{ marginBottom: 16 }}>
-              <label>Bus Type</label>
-              <BusTypePills value={concBusType} onChange={setConcBusType} />
+              <label>Bus Type
+                {routeBusTypes.length > 0 && <span className="text-muted" style={{ marginLeft: 6, fontWeight: 400 }}>(assigned to this route)</span>}
+              </label>
+              <BusTypePills value={concBusType} onChange={setConcBusType} allowed={concRouteBusTypes} />
             </div>
             <button type="submit" className="btn btn-primary" disabled={loading || !concRouteAC.selectedId || !concFromId || !concToId}>
               {loading ? 'Calculating…' : 'Calculate Fares'}
