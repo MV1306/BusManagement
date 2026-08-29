@@ -13,7 +13,8 @@ public record DirectRouteResult(
     int DestinationStopOrder,
     int Stops,
     double DistanceKm,
-    decimal? Fare);
+    decimal? Fare,
+    List<string> BusTypes);
 
 public record SmartRouteResponse(
     string From,

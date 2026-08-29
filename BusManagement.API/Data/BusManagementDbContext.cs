@@ -13,6 +13,7 @@ public class BusManagementDbContext(DbContextOptions<BusManagementDbContext> opt
     public DbSet<FareAuditLog> FareAuditLogs => Set<FareAuditLog>();
     public DbSet<StopTranslation> StopTranslations => Set<StopTranslation>();
     public DbSet<StageTranslation> StageTranslations => Set<StageTranslation>();
+    public DbSet<RouteBusType> RouteBusTypes => Set<RouteBusType>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -84,6 +85,14 @@ public class BusManagementDbContext(DbContextOptions<BusManagementDbContext> opt
             e.Property(t => t.LanguageCode).HasMaxLength(10).IsRequired();
             e.Property(t => t.TranslatedName).HasMaxLength(100).IsRequired();
             e.HasOne(t => t.RouteStage).WithMany(s => s.Translations).HasForeignKey(t => t.RouteStageId);
+        });
+
+        modelBuilder.Entity<RouteBusType>(e =>
+        {
+            e.HasKey(r => r.RouteBusTypeId);
+            e.HasIndex(r => new { r.RouteId, r.BusType }).IsUnique();
+            e.Property(r => r.BusType).HasConversion<string>().HasMaxLength(20);
+            e.HasOne(r => r.Route).WithMany(rt => rt.RouteBusTypes).HasForeignKey(r => r.RouteId).OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

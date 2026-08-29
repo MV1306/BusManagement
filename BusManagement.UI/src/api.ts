@@ -94,6 +94,7 @@ export interface SearchResult {
     stops: number;
     distanceKm: number;
     fare: number | null;
+    busTypes: BusType[];
   }[];
 }
 
@@ -414,6 +415,20 @@ export const journeyApi = {
 
 export const geocodingApi = {
   geocode: (name: string) => req<{ latitude: number; longitude: number }>(`/stops/geocode?name=${encodeURIComponent(name)}`),
+};
+
+// ── Route Bus Types ──────────────────────────────────────────────────────
+
+export interface RouteBusType {
+  routeBusTypeId: number;
+  routeId: number;
+  busType: BusType;
+}
+
+export const routeBusTypesApi = {
+  getByRoute: (routeId: number) => req<RouteBusType[]>(`/routes/${routeId}/bus-types`),
+  set: (routeId: number, busTypes: BusType[]) =>
+    req<RouteBusType[]>(`/routes/${routeId}/bus-types`, { method: 'PUT', body: JSON.stringify({ busTypes }) }),
 };
 
 // ── Export ────────────────────────────────────────────────────────────────

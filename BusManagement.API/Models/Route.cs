@@ -13,4 +13,5 @@ public class Route
 
     public ICollection<RouteStage> RouteStages { get; set; } = [];
     public ICollection<RouteStop> RouteStops { get; set; } = [];
+    public ICollection<RouteBusType> RouteBusTypes { get; set; } = [];
 }

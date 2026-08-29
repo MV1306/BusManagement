@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { routesApi, stopsApi, type SearchResult, type SmartSearchResult, type Stop } from '../api';
+import { routesApi, stopsApi, type SearchResult, type SmartSearchResult, type Stop, type BusType } from '../api';
 import { useToast } from '../toast';
 import StopAutocomplete from '../components/StopAutocomplete';
 
@@ -11,6 +11,31 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
+
+const BUS_TYPE_COLORS: Record<BusType, { color: string; dim: string }> = {
+  Ordinary: { color: '#5a9e6f', dim: 'rgba(90,158,111,.15)' },
+  Express:  { color: '#c2692a', dim: 'rgba(194,105,42,.15)' },
+  Deluxe:   { color: '#4a9b8e', dim: 'rgba(74,155,142,.15)' },
+  AC:       { color: '#d4a017', dim: 'rgba(212,160,23,.15)' },
+};
+
+function BusTypePills({ types }: { types: BusType[] }) {
+  if (!types?.length) return <span className="text-muted" style={{ fontSize: '0.72rem' }}>—</span>;
+  return (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {types.map(t => {
+        const c = BUS_TYPE_COLORS[t];
+        return (
+          <span key={t} style={{
+            fontSize: '0.65rem', fontWeight: 700, padding: '2px 7px',
+            borderRadius: 4, border: `1px solid ${c.color}`,
+            background: c.dim, color: c.color, whiteSpace: 'nowrap',
+          }}>{t.toUpperCase()}</span>
+        );
+      })}
+    </div>
+  );
+}
 
 type Criteria = 'ShortestDistance' | 'FewestStops' | 'FewestTransfers';
 type Mode = 'direct' | 'smart';
@@ -197,6 +222,7 @@ export default function RouteSearch() {
                       <span className="rs-route-arrow">→</span>
                       <span className="rs-route-stop">{directResult.toStop}</span>
                     </div>
+                    <BusTypePills types={r.busTypes} />
                   </div>
                   <div className="rs-route-right">
                     <div className="rs-route-stat"><span>{r.stops}</span><span>stops</span></div>

@@ -10,6 +10,7 @@ const navItems = [
   { section: 'Management' },
   { to: '/stops',      icon: <StopIcon />,   label: 'Stops',           key: '2' },
   { to: '/routes',     icon: <RouteIcon />,  label: 'Routes',          key: '3' },
+  { to: '/bustypes',   icon: <BusTypeIcon />, label: 'Bus Types',       key: 'B' },
   { to: '/fares',      icon: <FareIcon />,   label: 'Fares',           key: '4' },
   { to: '/import',     icon: <ImportIcon />, label: 'Import',          key: '8' },
   { section: 'Search & Calculate' },
@@ -29,7 +30,8 @@ const titles: Record<string, { label: string; icon: React.ReactNode }> = {
   '/dashboard':  { label: 'Dashboard',        icon: <DashIcon /> },
   '/stops':      { label: 'Stops',            icon: <StopIcon /> },
   '/routes':     { label: 'Routes',           icon: <RouteIcon /> },
-  '/fares':      { label: 'Fares',            icon: <FareIcon /> },
+  '/bustypes':   { label: 'Bus Types',         icon: <BusTypeIcon /> },
+  '/fares':      { label: 'Fares',             icon: <FareIcon /> },
   '/search':     { label: 'Route Search',     icon: <SearchIcon /> },
   '/journey':    { label: 'Journey Planner',  icon: <PlanIcon /> },
   '/calculator': { label: 'Fare Calculator',  icon: <CalcIcon /> },
@@ -104,6 +106,7 @@ function BusIcon()       { return <svg width="16" height="16" viewBox="0 0 24 24
 function DashIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>; }
 function StopIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>; }
 function RouteIcon()     { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="18" r="2"/><line x1="5" y1="8" x2="5" y2="16"/><path d="M5 16c0 1.1.9 2 2 2h10"/></svg>; }
+function BusTypeIcon()   { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><path d="M2 13h20"/><circle cx="7" cy="17" r="1"/><circle cx="17" cy="17" r="1"/><path d="M8 7h2"/><path d="M14 7h2"/></svg>; }
 function FareIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 6v2M12 16v2"/></svg>; }
 function SearchIcon()    { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>; }
 function PlanIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.663 17h4.673M12 3v1m6.364 1.636-.707.707M21 12h-1M4 12H3m3.343-5.657-.707-.707m2.828 9.9a5 5 0 1 1 7.072 0l-.548.547A3.374 3.374 0 0 0 14 18.469V19a2 2 0 1 1-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>; }

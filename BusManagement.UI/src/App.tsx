@@ -17,6 +17,7 @@ import FareAudit from './pages/FareAudit';
 import ExportPage from './pages/ExportPage';
 import Translations from './pages/Translations';
 import JourneyPlanner from './pages/JourneyPlanner';
+import RouteBusTypes from './pages/RouteBusTypes';
 
 export default function App() {
   const { toast } = useToast();
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="coverage"   element={<CoverageMap />} />
           <Route path="routecard"  element={<RouteCard />} />
           <Route path="audit"      element={<FareAudit />} />
+          <Route path="bustypes"   element={<RouteBusTypes />} />
           <Route path="export"       element={<ExportPage />} />
           <Route path="translations" element={<Translations />} />
         </Route>

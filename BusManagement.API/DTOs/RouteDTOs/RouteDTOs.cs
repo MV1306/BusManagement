@@ -30,3 +30,7 @@ public record RouteCardResponse(
     string RouteCode, string RouteName, string? StartingStop, string? EndingStop,
     int TotalStops, double TotalDistanceKm, bool IsActive,
     List<RouteCardStop> Stops, List<RouteCardFare> Fares);
+
+public record RouteBusTypeResponse(int RouteBusTypeId, int RouteId, string BusType);
+
+public record SetRouteBusTypesRequest(List<string> BusTypes);

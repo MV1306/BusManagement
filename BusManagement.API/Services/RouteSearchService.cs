@@ -23,7 +23,8 @@ public class RouteSearchService(BusManagementDbContext db)
                 BoardingStageOrder = r.RouteStops.Where(rs => rs.StopId == fromStopId).Select(rs => rs.RouteStage.StageOrder).First(),
                 DestStageOrder = r.RouteStops.Where(rs => rs.StopId == toStopId).Select(rs => rs.RouteStage.StageOrder).First(),
                 TotalStops = r.RouteStops.Count,
-                AllStages = r.RouteStages.OrderBy(rs => rs.StageOrder).ToList()
+                AllStages = r.RouteStages.OrderBy(rs => rs.StageOrder).ToList(),
+                BusTypes = r.RouteBusTypes.Select(bt => bt.BusType.ToString()).ToList()
             })
             .ToListAsync();
 
@@ -36,7 +37,7 @@ public class RouteSearchService(BusManagementDbContext db)
                 .Sum(s => s.DistanceFromPreviousKm ?? 0), 2);
             int stages = maxOrder - minOrder + 1;
             return new DirectRouteResult(r.RouteId, r.RouteCode, r.RouteName,
-                r.BoardingStageOrder, r.DestStageOrder, stages, distKm, null);
+                r.BoardingStageOrder, r.DestStageOrder, stages, distKm, null, r.BusTypes);
         }).ToList();
 
         return new RouteSearchResponse(fromStop.StopName, toStop.StopName, validRoutes);
