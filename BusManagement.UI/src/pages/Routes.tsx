@@ -104,22 +104,25 @@ interface MtcImportPanelProps {
 
 function MtcImportPanel({ routeCode, existingCount, onImport }: MtcImportPanelProps) {
   const [open, setOpen] = useState(false);
-  const [input, setInput] = useState(routeCode);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [fetched, setFetched] = useState<{ order: number; name: string }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFetch = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const doFetch = async (code: string) => {
     setLoading(true); setFetched(null); setError(null);
     try {
-      const result = await mtcApi.getStages(input.trim());
+      const result = await mtcApi.getStages(code.trim());
       setFetched(result.stages);
     } catch {
-      setError(`No stages found for "${input.trim()}" on the MTC website.`);
+      setError(`No stages found for "${code.trim()}" on the MTC website.`);
     } finally { setLoading(false); }
+  };
+
+  const handleOpen = () => {
+    setOpen(true); setFetched(null); setError(null);
+    if (routeCode.trim()) doFetch(routeCode);
   };
 
   const handleImport = async () => {
@@ -134,7 +137,7 @@ function MtcImportPanel({ routeCode, existingCount, onImport }: MtcImportPanelPr
 
   if (!open) return (
     <div style={{ marginBottom: 12 }}>
-      <button type="button" className="btn btn-subtle btn-sm" onClick={() => { setOpen(true); setInput(routeCode); setFetched(null); setError(null); }}>
+      <button type="button" className="btn btn-subtle btn-sm" onClick={handleOpen}>
         ⬇ Import Stages from MTC
       </button>
     </div>
@@ -143,7 +146,7 @@ function MtcImportPanel({ routeCode, existingCount, onImport }: MtcImportPanelPr
   return (
     <div style={{ marginBottom: 16, padding: 14, border: '1px solid var(--border)', borderRadius: 8, background: 'var(--surface)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontWeight: 600, fontSize: 13 }}>Import Stages from MTC Website</span>
+        <span style={{ fontWeight: 600, fontSize: 13 }}>Import Stages from MTC — {routeCode}</span>
         <button type="button" className="btn btn-subtle btn-sm" onClick={() => { setOpen(false); setFetched(null); setError(null); }}>✕</button>
       </div>
 
@@ -153,18 +156,7 @@ function MtcImportPanel({ routeCode, existingCount, onImport }: MtcImportPanelPr
         </div>
       )}
 
-      <form onSubmit={handleFetch} style={{ display: 'flex', gap: 8, marginBottom: fetched || error ? 12 : 0 }}>
-        <input
-          value={input}
-          onChange={e => { setInput(e.target.value.toUpperCase()); setFetched(null); setError(null); }}
-          placeholder="MTC route code e.g. 104"
-          style={{ flex: 1, padding: '7px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13 }}
-        />
-        <button type="submit" className="btn btn-subtle btn-sm" disabled={loading || !input.trim()}>
-          {loading ? 'Fetching…' : 'Fetch'}
-        </button>
-      </form>
-
+      {loading && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>Fetching from MTC…</div>}
       {error && <div style={{ fontSize: 12, color: 'var(--error-text, #721c24)', marginBottom: 8 }}>{error}</div>}
 
       {fetched && (
@@ -183,7 +175,7 @@ function MtcImportPanel({ routeCode, existingCount, onImport }: MtcImportPanelPr
             </table>
           </div>
           <button type="button" className="btn btn-primary btn-sm" onClick={handleImport} disabled={importing}>
-            {importing ? 'Importing…' : `Import All ${fetched.length} Stages`}
+            {importing ? 'Importing…' : `✓ Confirm Import ${fetched.length} Stages`}
           </button>
         </>
       )}
