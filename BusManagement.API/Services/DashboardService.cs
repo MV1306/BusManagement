@@ -41,6 +41,16 @@ public class DashboardService(BusManagementDbContext db)
                 r.RouteStops.Sum(rs => (double?)rs.DistanceFromPreviousKm) ?? 0))
             .ToListAsync();
 
+        var topRoutesByDistance = await db.Routes
+            .Where(r => r.RouteStops.Any())
+            .OrderByDescending(r => r.RouteStops.Sum(rs => (double?)rs.DistanceFromPreviousKm) ?? 0)
+            .Take(5)
+            .Select(r => new TopRoute(
+                r.RouteId, r.RouteCode, r.RouteName,
+                r.RouteStops.Select(rs => rs.StopId).Distinct().Count(),
+                r.RouteStops.Sum(rs => (double?)rs.DistanceFromPreviousKm) ?? 0))
+            .ToListAsync();
+
         var cutoff = DateTime.UtcNow.Date.AddDays(-6);
         var rawCounts = await db.Stops
             .Where(s => s.CreatedDate >= cutoff)
@@ -59,6 +69,6 @@ public class DashboardService(BusManagementDbContext db)
             totalStops, activeStops, totalStops - activeStops,
             totalRoutes, activeRoutes, totalRoutes - activeRoutes,
             totalFares, routesWithNoStops, stopsWithNoCoords,
-            lastImported, recentRoutes, topRoutes, stopsLast7);
+            lastImported, recentRoutes, topRoutes, topRoutesByDistance, stopsLast7);
     }
 }

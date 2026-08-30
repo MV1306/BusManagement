@@ -267,6 +267,7 @@ export interface DashboardSummary {
   lastImportedAt: string | null;
   recentRoutes: RecentRoute[];
   topRoutesByStops: TopRoute[];
+  topRoutesByDistance: TopRoute[];
   stopsLast7Days: DailyCount[];
 }
 

@@ -222,30 +222,58 @@ export default function Dashboard() {
         </div>
 
         {/* ── Top Routes ── */}
-        <div className="card">
-          <div className="card-header"><div className="card-title">Top Routes by Stops</div></div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {data.topRoutesByStops.length === 0 && (
-              <div style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>No data yet</div>
-            )}
-            {data.topRoutesByStops.map((r, i) => {
-              const max = data.topRoutesByStops[0]?.stopCount ?? 1;
-              const pct = (r.stopCount / max) * 100;
-              return (
-                <div key={r.routeId} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, width: 14 }}>#{i + 1}</span>
-                      <span className="route-badge" style={{ fontSize: '0.68rem' }}>{r.routeCode}</span>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <div className="card-header"><div className="card-title">Top Routes by Stops</div></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 0 16px' }}>
+              {data.topRoutesByStops.length === 0 && (
+                <div style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>No data yet</div>
+              )}
+              {data.topRoutesByStops.map((r, i) => {
+                const max = data.topRoutesByStops[0]?.stopCount ?? 1;
+                const pct = (r.stopCount / max) * 100;
+                return (
+                  <div key={r.routeId} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, width: 14 }}>#{i + 1}</span>
+                        <span className="route-badge" style={{ fontSize: '0.68rem' }}>{r.routeCode}</span>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', fontWeight: 600 }}>{r.stopCount}</span>
                     </div>
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', fontWeight: 600 }}>{r.stopCount}</span>
+                    <div style={{ height: 4, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: 'var(--primary)', borderRadius: 99, transition: 'width 0.5s ease' }} />
+                    </div>
                   </div>
-                  <div style={{ height: 4, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: 'var(--primary)', borderRadius: 99, transition: 'width 0.5s ease' }} />
+                );
+              })}
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div className="card-header" style={{ paddingTop: 0 }}><div className="card-title">Top Routes by Distance</div></div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {data.topRoutesByDistance.length === 0 && (
+                <div style={{ color: 'var(--text-3)', fontSize: '0.85rem' }}>No data yet</div>
+              )}
+              {data.topRoutesByDistance.map((r, i) => {
+                const max = data.topRoutesByDistance[0]?.totalDistanceKm ?? 1;
+                const pct = (r.totalDistanceKm / max) * 100;
+                return (
+                  <div key={r.routeId} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: '0.65rem', color: 'var(--text-3)', fontWeight: 700, width: 14 }}>#{i + 1}</span>
+                        <span className="route-badge" style={{ fontSize: '0.68rem' }}>{r.routeCode}</span>
+                      </div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', fontWeight: 600 }}>{r.totalDistanceKm.toFixed(1)} km</span>
+                    </div>
+                    <div style={{ height: 4, background: 'var(--surface-3)', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: 'var(--teal)', borderRadius: 99, transition: 'width 0.5s ease' }} />
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ public record DashboardSummary(
     DateTime? LastImportedAt,
     List<RecentRoute> RecentRoutes,
     List<TopRoute> TopRoutesByStops,
+    List<TopRoute> TopRoutesByDistance,
     List<DailyCount> StopsLast7Days);
 
 public record RecentRoute(

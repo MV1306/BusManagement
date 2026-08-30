@@ -79,7 +79,7 @@
 }
 
 /* ── Base ── */
-html { font-size: 14px; }
+html { font-size: calc(14px * var(--a11y-font-scale, 1)); }
 
 body {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
@@ -88,7 +88,6 @@ body {
   min-height: 100vh;
   line-height: var(--a11y-line-height, 1.6);
   -webkit-font-smoothing: antialiased;
-  font-size: calc(14px * var(--a11y-font-scale, 1));
 }
 
 /* ── Accessibility overrides ── */
