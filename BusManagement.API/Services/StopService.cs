@@ -87,6 +87,50 @@ public class StopService(BusManagementDbContext db)
         return new MergeStopsResult(keepId, deleteId, affected.Count);
     }
 
+    public async Task<List<StopRouteResult>> GetRoutesForStopAsync(int stopId)
+    {
+        var routeIds = await db.RouteStops
+            .Where(rs => rs.StopId == stopId)
+            .Select(rs => rs.RouteId)
+            .Distinct()
+            .ToListAsync();
+
+        var results = new List<StopRouteResult>();
+
+        foreach (var routeId in routeIds)
+        {
+            var route = await db.Routes
+                .Include(r => r.RouteBusTypes)
+                .FirstOrDefaultAsync(r => r.RouteId == routeId);
+            if (route is null) continue;
+
+            var stops = await db.RouteStops
+                .Where(rs => rs.RouteId == routeId)
+                .OrderBy(rs => rs.StopOrder)
+                .Include(rs => rs.Stop)
+                .ToListAsync();
+
+            if (stops.Count == 0) continue;
+
+            var thisStop = stops.FirstOrDefault(rs => rs.StopId == stopId);
+            var totalDist = stops.Sum(rs => rs.DistanceFromPreviousKm);
+
+            results.Add(new StopRouteResult(
+                route.RouteId, route.RouteCode, route.RouteName, route.IsActive,
+                thisStop?.StopOrder ?? 0,
+                stops.Count,
+                Math.Round(totalDist, 2),
+                route.RouteBusTypes.Select(bt => bt.BusType.ToString()).ToList(),
+                stops.Select((rs, i) => new StopRouteStop(
+                    rs.StopOrder, rs.Stop.StopName, rs.Stop.StopCode,
+                    rs.Stop.Latitude, rs.Stop.Longitude,
+                    i == 0, i == stops.Count - 1)).ToList()
+            ));
+        }
+
+        return results.OrderBy(r => r.RouteCode).ToList();
+    }
+
     public async Task<List<NearbyStopResponse>> GetNearbyAsync(double lat, double lng, double radiusKm)
     {
         var stops = await db.Stops

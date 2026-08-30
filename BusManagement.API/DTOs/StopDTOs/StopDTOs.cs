@@ -16,3 +16,11 @@ public record NearbyStopResponse(
 public record MergeStopsRequest(int MergeIntoStopId);
 
 public record MergeStopsResult(int KeptStopId, int DeletedStopId, int AffectedRoutes);
+
+public record StopRouteStop(int StopOrder, string StopName, string StopCode, double? Latitude, double? Longitude, bool IsFirstStop, bool IsLastStop);
+
+public record StopRouteResult(
+    int RouteId, string RouteCode, string RouteName, bool IsActive,
+    int StopOrderOnRoute, int TotalStops, double TotalDistanceKm,
+    List<string> BusTypes,
+    List<StopRouteStop> Stops);

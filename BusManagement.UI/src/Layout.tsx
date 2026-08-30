@@ -20,8 +20,9 @@ const adminNavItems = [
   { to: '/calculator', icon: <CalcIcon />,    label: 'Fare Calculator', key: '6', roles: ['Admin', 'User'] },
   { to: '/matrix',     icon: <MatrixIcon />,  label: 'Fare Matrix',     key: '7', roles: ['Admin', 'User'] },
   { section: 'Maps & Reports' },
-  { to: '/coverage',   icon: <MapIcon />,     label: 'Coverage Map',    key: '9', roles: ['Admin', 'User'] },
-  { to: '/routecard',  icon: <CardIcon />,    label: 'Route Card',      key: '0', roles: ['Admin', 'User'] },
+  { to: '/coverage',   icon: <MapIcon />,      label: 'Coverage Map',    key: '9', roles: ['Admin', 'User'] },
+  { to: '/stoproutes', icon: <StopRouteIcon />, label: 'Stop Routes',     key: 'S', roles: ['Admin', 'User'] },
+  { to: '/routecard',  icon: <CardIcon />,      label: 'Route Card',      key: '0', roles: ['Admin', 'User'] },
   { to: '/audit',      icon: <AuditIcon />,   label: 'Fare Audit',      key: 'A', roles: ['Admin'] },
   { to: '/export',     icon: <ExportIcon />,  label: 'Export',          key: 'E', roles: ['Admin'] },
   { to: '/translations', icon: <LangIcon />,  label: 'Translations',    key: 'T', roles: ['Admin'] },
@@ -41,7 +42,8 @@ const titles: Record<string, { label: string; icon: React.ReactNode }> = {
   '/matrix':     { label: 'Fare Matrix',      icon: <MatrixIcon /> },
   '/import':     { label: 'Import',           icon: <ImportIcon /> },
   '/coverage':   { label: 'Coverage Map',     icon: <MapIcon /> },
-  '/routecard':  { label: 'Route Card',       icon: <CardIcon /> },
+  '/stoproutes': { label: 'Stop Routes',       icon: <StopRouteIcon /> },
+  '/routecard':  { label: 'Route Card',        icon: <CardIcon /> },
   '/audit':      { label: 'Fare Audit Log',   icon: <AuditIcon /> },
   '/export':        { label: 'Export',           icon: <ExportIcon /> },
   '/translations':  { label: 'Translations',     icon: <LangIcon /> },
@@ -76,6 +78,7 @@ export default function Layout() {
                   title={item.label}
                   className={({ isActive }) => isActive ? 'active' : ''}>
                   <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-label">{item.label}</span>
                 </NavLink>
               )
           )}
@@ -134,3 +137,4 @@ function SunIcon()       { return <svg width="16" height="16" viewBox="0 0 24 24
 function MoonIcon()      { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>; }
 function LogoutIcon()    { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>; }
 function LabIcon()       { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v11l-4 7h14l-4-7V3"/></svg>; }
+function StopRouteIcon() { return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/><path d="M19 9h2M3 9h2"/><path d="M19 15l2 2M3 15l-2 2"/></svg>; }

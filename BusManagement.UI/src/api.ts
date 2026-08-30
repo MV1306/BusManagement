@@ -173,6 +173,33 @@ export interface MergeResult {
   affectedRoutes: number;
 }
 
+export interface StopRouteStop {
+  stopOrder: number;
+  stopName: string;
+  stopCode: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  isFirstStop: boolean;
+  isLastStop: boolean;
+}
+
+export interface StopRouteResult {
+  routeId: number;
+  routeCode: string;
+  routeName: string;
+  isActive: boolean;
+  stopOrderOnRoute: number;
+  totalStops: number;
+  totalDistanceKm: number;
+  busTypes: string[];
+  stops: StopRouteStop[];
+}
+
+export interface StopRoutesResponse {
+  stop: Stop;
+  routes: StopRouteResult[];
+}
+
 export const stopsApi = {
   getAll: (page = 1, pageSize = 50, search = '') => req<PagedResult<Stop>>(`/stops?page=${page}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}`),
   getAllUnpaged: () => req<PagedResult<Stop>>('/stops?page=1&pageSize=10000'),  // for autocomplete
@@ -184,6 +211,7 @@ export const stopsApi = {
   delete: (id: number) => req<void>(`/stops/${id}`, { method: 'DELETE' }),
   merge: (keepId: number, deleteId: number) =>
     req<MergeResult>(`/stops/${keepId}/merge`, { method: 'POST', body: JSON.stringify({ mergeIntoStopId: deleteId }) }),
+  getRoutes: (stopId: number) => req<StopRoutesResponse>(`/stops/${stopId}/routes`),
 };
 
 // ── Routes ─────────────────────────────────────────────────────────────────

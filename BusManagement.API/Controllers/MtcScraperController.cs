@@ -163,6 +163,12 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         if (chaloStops is null || chaloStops.Count == 0)
             return NotFound(new { message = "No stops found in Chalo response." });
 
+        // Deduplicate by stop_code (Chalo sometimes repeats the same stop in stopSequenceWithDetails)
+        chaloStops = chaloStops
+            .GroupBy(s => string.IsNullOrEmpty(s.StopCode) ? $"{s.Lat:F6},{s.Lon:F6}" : s.StopCode)
+            .Select(g => g.First())
+            .ToList();
+
         // Check if chaloStops are in reverse order relative to MTC stages
         // Compare first/last Chalo stop name against MTC first/last stage name
         var chaloFirst = NormalizeStopName(chaloStops.First().StopName);
@@ -431,6 +437,7 @@ public class ChaloRouteBody
 
 public class ChaloStop
 {
+    [JsonPropertyName("stop_code")] public string StopCode { get; set; } = "";
     [JsonPropertyName("stop_name")] public string StopName { get; set; } = "";
     [JsonPropertyName("stop_lat")]  public double Lat      { get; set; }
     [JsonPropertyName("stop_lon")]  public double Lon      { get; set; }

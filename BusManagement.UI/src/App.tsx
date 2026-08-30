@@ -21,6 +21,7 @@ import Translations from './pages/Translations';
 import JourneyPlanner from './pages/JourneyPlanner';
 import RouteBusTypes from './pages/RouteBusTypes';
 import MtcScraper from './pages/MtcScraper';
+import StopRoutes from './pages/StopRoutes';
 
 function AppRoutes() {
   const { toast } = useToast();
@@ -52,6 +53,7 @@ function AppRoutes() {
         <Route path="calculator" element={<ProtectedRoute roles={['Admin', 'User']}><FareCalculator /></ProtectedRoute>} />
         <Route path="matrix"     element={<ProtectedRoute roles={['Admin', 'User']}><FareMatrix /></ProtectedRoute>} />
         <Route path="coverage"   element={<ProtectedRoute roles={['Admin', 'User']}><CoverageMap /></ProtectedRoute>} />
+        <Route path="stoproutes" element={<ProtectedRoute roles={['Admin', 'User']}><StopRoutes /></ProtectedRoute>} />
         <Route path="routecard"  element={<ProtectedRoute roles={['Admin', 'User']}><RouteCard /></ProtectedRoute>} />
       </Route>
     </Routes>

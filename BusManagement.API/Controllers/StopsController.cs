@@ -50,4 +50,13 @@ public class StopsController(StopService stopService) : ControllerBase
         var result = await stopService.MergeAsync(id, req.MergeIntoStopId);
         return result is null ? BadRequest("Invalid stop IDs or same stop specified.") : Ok(result);
     }
+
+    [HttpGet("{id}/routes")]
+    public async Task<IActionResult> GetRoutes(int id)
+    {
+        var stop = await stopService.GetByIdAsync(id);
+        if (stop is null) return NotFound();
+        var routes = await stopService.GetRoutesForStopAsync(id);
+        return Ok(new { stop, routes });
+    }
 }
