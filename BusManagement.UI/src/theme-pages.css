@@ -77,7 +77,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .dash-stat {
@@ -117,7 +117,21 @@
   margin-bottom: 4px;
 }
 
-.dash-stat-sub { font-size: 0.72rem; color: var(--text-3); }
+.dash-stat-sub { font-size: 0.72rem; color: var(--text-3); margin-top: 6px; }
+
+.dash-route-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  transition: background 0.12s;
+}
+.dash-route-row:last-child { border-bottom: none; }
+.dash-route-row:hover { background: var(--surface-2); }
 
 /* ── Health bars ── */
 .health-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
@@ -491,4 +505,5 @@
   .summary-item { min-width: 80px; padding: 10px 12px; }
   .card { padding: 16px; }
   .health-bar-label { width: 140px; font-size: 0.72rem; }
+  .dash-route-row { flex-wrap: wrap; gap: 6px; }
 }

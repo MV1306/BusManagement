@@ -265,6 +265,33 @@ export interface DashboardSummary {
   routesWithNoStops: number;
   stopsWithNoCoordinates: number;
   lastImportedAt: string | null;
+  recentRoutes: RecentRoute[];
+  topRoutesByStops: TopRoute[];
+  stopsLast7Days: DailyCount[];
+}
+
+export interface RecentRoute {
+  routeId: number;
+  routeCode: string;
+  routeName: string;
+  stopCount: number;
+  totalDistanceKm: number;
+  busTypes: string[];
+  createdDate: string;
+  isActive: boolean;
+}
+
+export interface TopRoute {
+  routeId: number;
+  routeCode: string;
+  routeName: string;
+  stopCount: number;
+  totalDistanceKm: number;
+}
+
+export interface DailyCount {
+  date: string;
+  count: number;
 }
 
 export const dashboardApi = {
