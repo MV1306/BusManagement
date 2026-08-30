@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from './theme';
 import { useKeyboardShortcuts } from './shortcuts';
 import { useAuth } from './auth';
+import { A11yButton, AccessibilityPanel } from './accessibility';
 import './index.css';
 
 const adminNavItems = [
@@ -54,6 +55,7 @@ export default function Layout() {
   const { pathname } = useLocation();
   const { theme, toggle } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [a11yOpen, setA11yOpen] = useState(false);
   const base = '/' + pathname.split('/')[1];
   const page = titles[base] ?? { label: 'TransitOps', icon: <BusIcon /> };
   const { auth, logout } = useAuth();
@@ -101,6 +103,7 @@ export default function Layout() {
           <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
             <span className="topbar-org">Metropolitan Transport Corporation</span>
             {auth && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{auth.username}</span>}
+            <A11yButton onClick={() => setA11yOpen(true)} />
             <button className="theme-toggle" onClick={toggle} title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}>
               {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
             </button>
@@ -112,6 +115,8 @@ export default function Layout() {
           <Outlet />
         </div>
       </div>
+
+      <AccessibilityPanel open={a11yOpen} onClose={() => setA11yOpen(false)} />
     </div>
   );
 }

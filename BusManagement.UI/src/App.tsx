@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { setApiErrorHandler } from './api';
 import { useToast } from './toast';
 import { AuthProvider, ProtectedRoute } from './auth';
+import { A11yProvider } from './accessibility';
 import Layout from './Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -64,7 +65,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <A11yProvider>
+          <AppRoutes />
+        </A11yProvider>
       </AuthProvider>
     </BrowserRouter>
   );
