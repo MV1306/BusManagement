@@ -304,7 +304,6 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
 
         // 1. Coordinate-first: find closest stop within 80m with name similarity, skipping already-used stops
         // OR within 30m regardless of name (same physical location, different transliteration)
-        var chaloNormEarly = NormalizeStopName(chaloName);
         if (chaloHasCoords)
         {
             var byCoord = stops
@@ -319,15 +318,18 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         }
 
         // 2. Name match — only valid if coords agree (or one side has no coords)
-        var chaloNorm = chaloNormEarly;
+        // Use raw uppercase (no noise stripping) so "BUS STAND" vs "RAILWAY STATION" don't collapse to the same token
+        var chaloRaw = chaloName.Trim().ToUpperInvariant();
 
         bool NameMatches(Stop s)
         {
-            var dbNorm = NormalizeStopName(s.StopName);
-            return string.Equals(dbNorm, chaloNorm, StringComparison.OrdinalIgnoreCase)
-                || (chaloNorm.Length >= 5 && dbNorm.Length >= 5 &&
-                    (dbNorm.Contains(chaloNorm, StringComparison.OrdinalIgnoreCase) ||
-                     chaloNorm.Contains(dbNorm, StringComparison.OrdinalIgnoreCase)));
+            var dbRaw = s.StopName.Trim().ToUpperInvariant();
+            if (string.Equals(dbRaw, chaloRaw, StringComparison.OrdinalIgnoreCase)) return true;
+            // Require at least 2 significant words in common (length > 3) to avoid single-word false matches
+            var chaloWords = chaloRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3).ToArray();
+            var dbWords    = dbRaw.Split(' ', StringSplitOptions.RemoveEmptyEntries).Where(w => w.Length > 3).ToArray();
+            int common = chaloWords.Count(cw => dbWords.Any(dw => CommonPrefixLength(cw, dw) >= 5 || (cw.Length >= 6 && dw.Length >= 6 && CommonPrefixLength(cw, dw) >= 3)));
+            return common >= 2;
         }
 
         foreach (var s in stops.Where(s => (s.StopId == 0 || !usedStopIds.Contains(s.StopId)) && NameMatches(s)))
