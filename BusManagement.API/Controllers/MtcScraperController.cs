@@ -163,9 +163,11 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         if (chaloStops is null || chaloStops.Count == 0)
             return NotFound(new { message = "No stops found in Chalo response." });
 
-        // Deduplicate by stop_code (Chalo sometimes repeats the same stop in stopSequenceWithDetails)
+        // Deduplicate: by stop_code first, then by coordinates (F4 ≈ 11m precision)
         chaloStops = chaloStops
-            .GroupBy(s => string.IsNullOrEmpty(s.StopCode) ? $"{s.Lat:F6},{s.Lon:F6}" : s.StopCode)
+            .GroupBy(s => string.IsNullOrEmpty(s.StopCode) ? $"{s.Lat:F4},{s.Lon:F4}" : s.StopCode)
+            .Select(g => g.First())
+            .GroupBy(s => $"{s.Lat:F4},{s.Lon:F4}")
             .Select(g => g.First())
             .ToList();
 
@@ -196,13 +198,14 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         // Build a lookup: stage index by position ratio
         int created = 0, matched = 0;
         var routeStops = new List<RouteStop>();
+        var usedStopIds = new HashSet<int>();
 
         for (int i = 0; i < chaloStops.Count; i++)
         {
             var cs = chaloStops[i];
 
             // Find or create stop — priority: coordinate proximity → normalized name
-            var existing = FindExistingStop(existingStops, cs.StopName, cs.Lat, cs.Lon);
+            var existing = FindExistingStop(existingStops, cs.StopName, cs.Lat, cs.Lon, usedStopIds);
 
             Stop stop;
             if (existing is not null)
@@ -214,6 +217,7 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
                     existing.Longitude = cs.Lon;
                 }
                 stop = existing;
+                usedStopIds.Add(existing.StopId);
                 matched++;
             }
             else
@@ -233,6 +237,7 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
                 };
                 db.Stops.Add(stop);
                 existingStops.Add(stop);
+                // StopId is 0 until SaveChanges, so track by reference via usedStopIds after save
                 created++;
             }
 
@@ -293,24 +298,28 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
     // 3. Neither has coords → name match only
     // Name match = normalised exact OR one contains the other (min 5 chars)
     // If name matches but coords are available and distance > 500m → NOT a match (different physical stop)
-    private static Stop? FindExistingStop(List<Stop> stops, string chaloName, double lat, double lon)
+    private static Stop? FindExistingStop(List<Stop> stops, string chaloName, double lat, double lon, HashSet<int> usedStopIds)
     {
         bool chaloHasCoords = lat != 0 && lon != 0;
 
-        // 1. Coordinate-first: find closest stop within 200m that also has a reasonable name overlap
+        // 1. Coordinate-first: find closest stop within 80m with name similarity, skipping already-used stops
+        // OR within 30m regardless of name (same physical location, different transliteration)
+        var chaloNormEarly = NormalizeStopName(chaloName);
         if (chaloHasCoords)
         {
             var byCoord = stops
-                .Where(s => s.Latitude.HasValue && s.Longitude.HasValue)
+                .Where(s => s.Latitude.HasValue && s.Longitude.HasValue && (s.StopId == 0 || !usedStopIds.Contains(s.StopId)))
                 .Select(s => (stop: s, dist: Haversine(lat, lon, s.Latitude!.Value, s.Longitude!.Value)))
-                .Where(x => x.dist <= 0.2)   // 200 m
+                .Where(x => x.dist <= 0.08)  // 80m
                 .OrderBy(x => x.dist)
-                .FirstOrDefault();
+                .FirstOrDefault(x =>
+                    x.dist <= 0.03 ||  // within 30m: accept regardless of name
+                    NameSimilarity(chaloName, x.stop.StopName) >= 2);  // 30-80m: require at least 2 matching words
             if (byCoord.stop is not null) return byCoord.stop;
         }
 
         // 2. Name match — only valid if coords agree (or one side has no coords)
-        var chaloNorm = NormalizeStopName(chaloName);
+        var chaloNorm = chaloNormEarly;
 
         bool NameMatches(Stop s)
         {
@@ -321,7 +330,7 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
                      chaloNorm.Contains(dbNorm, StringComparison.OrdinalIgnoreCase)));
         }
 
-        foreach (var s in stops.Where(NameMatches))
+        foreach (var s in stops.Where(s => (s.StopId == 0 || !usedStopIds.Contains(s.StopId)) && NameMatches(s)))
         {
             // If both sides have coordinates, reject if they are more than 500m apart
             if (chaloHasCoords && s.Latitude.HasValue && s.Longitude.HasValue)
