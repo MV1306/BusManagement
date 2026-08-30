@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { stopsApi, type Stop, type StopRouteResult, type StopRoutesResponse } from '../api';
+import { stopsApi, type Stop, type StopRoutesResponse } from '../api';
 import StopAutocomplete from '../components/StopAutocomplete';
 import '../theme-coverage.css';
 import '../theme-stoproutes.css';
@@ -249,7 +249,7 @@ export default function StopRoutes() {
             </div>
 
             <div className="cov-route-list">
-              {filteredRoutes.map((r, idx) => {
+              {filteredRoutes.map((r) => {
                 const color = ROUTE_COLORS[result.routes.indexOf(r) % ROUTE_COLORS.length];
                 const active = selectedRoutes.has(r.routeId);
                 return (
