@@ -19,6 +19,32 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         if (string.IsNullOrWhiteSpace(route))
             return BadRequest(new { message = "route is required" });
 
+        var result = await ScrapeRoute(route);
+        return result.Error is not null
+            ? StatusCode(result.StatusCode, new { message = result.Error })
+            : Ok(result.Data);
+    }
+
+    [HttpPost("stages/batch")]
+    public async Task<IActionResult> GetStagesBatch([FromBody] string[] routes)
+    {
+        if (routes is null || routes.Length == 0)
+            return BadRequest(new { message = "routes array is required" });
+
+        var tasks = routes
+            .Where(r => !string.IsNullOrWhiteSpace(r))
+            .Select(r => ScrapeRoute(r.Trim()))
+            .ToArray();
+
+        var results = await Task.WhenAll(tasks);
+
+        return Ok(results.Select(r => r.Error is not null
+            ? (object)new { status = "error",   routeCode = r.RouteCode, error = r.Error }
+            : (object)new { status = "ok",       routeCode = r.RouteCode, data  = r.Data }));
+    }
+
+    private async Task<ScrapeResult> ScrapeRoute(string route)
+    {
         var client = httpFactory.CreateClient("MtcScraper");
         HttpResponseMessage res;
         try
@@ -27,18 +53,17 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         }
         catch (Exception ex)
         {
-            return StatusCode(502, new { message = $"Failed to reach MTC website: {ex.Message}" });
+            return ScrapeResult.Fail(route, 502, $"Failed to reach MTC website: {ex.Message}");
         }
 
         if (!res.IsSuccessStatusCode)
-            return StatusCode(502, new { message = $"MTC website returned {res.StatusCode}" });
+            return ScrapeResult.Fail(route, 502, $"MTC website returned {res.StatusCode}");
 
         var html = await res.Content.ReadAsStringAsync();
 
-        // Extract stages from <ul class="route"><li><span>N</span> STAGE_NAME</li>...
         var stageMatches = StagePattern().Matches(html);
         if (stageMatches.Count == 0)
-            return NotFound(new { message = $"No stages found for route '{route}'. The route may not exist." });
+            return ScrapeResult.Fail(route, 404, $"No stages found for route '{route}'. The route may not exist.");
 
         var stages = stageMatches.Select(m => new
         {
@@ -46,11 +71,10 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             name  = WebUtility.HtmlDecode(m.Groups[2].Value.Trim()),
         }).ToList();
 
-        // Extract origin / destination from .type divs
         var origin      = InfoPattern("Origin").Match(html).Groups[1].Value.Trim();
         var destination = InfoPattern("Destination").Match(html).Groups[1].Value.Trim();
 
-        return Ok(new
+        return ScrapeResult.Ok(route, new
         {
             routeCode   = route.ToUpperInvariant(),
             origin      = WebUtility.HtmlDecode(origin),
@@ -58,6 +82,12 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             totalStages = stages.Count,
             stages,
         });
+    }
+
+    private record ScrapeResult(string RouteCode, int StatusCode, object? Data, string? Error)
+    {
+        public static ScrapeResult Ok(string route, object data)   => new(route.ToUpperInvariant(), 200, data, null);
+        public static ScrapeResult Fail(string route, int code, string error) => new(route.ToUpperInvariant(), code, null, error);
     }
 
     [GeneratedRegex(@"<li><span>(\d+)</span>\s*([^<]+)</li>")]

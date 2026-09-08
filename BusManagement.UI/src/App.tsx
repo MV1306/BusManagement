@@ -22,6 +22,7 @@ import Translations from './pages/Translations';
 import JourneyPlanner from './pages/JourneyPlanner';
 import RouteBusTypes from './pages/RouteBusTypes';
 import MtcScraper from './pages/MtcScraper';
+import MtcBatchScraper from './pages/MtcBatchScraper';
 import StopRoutes from './pages/StopRoutes';
 
 function AppRoutes() {
@@ -46,7 +47,8 @@ function AppRoutes() {
         <Route path="export"       element={<ProtectedRoute roles={['Admin']}><ExportPage /></ProtectedRoute>} />
         <Route path="translations" element={<ProtectedRoute roles={['Admin']}><Translations /></ProtectedRoute>} />
         <Route path="audit"        element={<ProtectedRoute roles={['Admin']}><FareAudit /></ProtectedRoute>} />
-        <Route path="mtcscraper"   element={<ProtectedRoute roles={['Admin']}><MtcScraper /></ProtectedRoute>} />
+        <Route path="mtcscraper"      element={<ProtectedRoute roles={['Admin']}><MtcScraper /></ProtectedRoute>} />
+        <Route path="mtcbatchscraper" element={<ProtectedRoute roles={['Admin']}><MtcBatchScraper /></ProtectedRoute>} />
 
         {/* Admin + User */}
         <Route path="search"     element={<ProtectedRoute roles={['Admin', 'User']}><RouteSearch /></ProtectedRoute>} />
