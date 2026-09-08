@@ -536,9 +536,14 @@ export type MtcBatchItem =
   | { status: 'ok';    routeCode: string; data: MtcRouteInfo }
   | { status: 'error'; routeCode: string; error: string };
 
+export type MtcImportBatchItem =
+  | { status: 'ok';    routeCode: string; routeId: number; created: boolean; stagesImported: number }
+  | { status: 'error'; routeCode: string; error: string };
+
 export const mtcApi = {
   getStages: (route: string) => req<MtcRouteInfo>(`/mtc/stages?route=${encodeURIComponent(route)}`),
   getStagesBatch: (routes: string[]) => req<MtcBatchItem[]>('/mtc/stages/batch', { method: 'POST', body: JSON.stringify(routes) }),
+  importStagesBatch: (routes: string[]) => req<MtcImportBatchItem[]>('/mtc/stages/batch/import', { method: 'POST', body: JSON.stringify(routes) }),
   importStops: (routeId: number) => req<MtcImportResult>(`/mtc/import-stops/${routeId}`, { method: 'POST' }),
 };
 

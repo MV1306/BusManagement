@@ -1,12 +1,16 @@
 import { useRef, useState } from 'react';
-import { mtcApi, type MtcBatchItem, type MtcRouteInfo } from '../api';
+import { mtcApi, type MtcBatchItem, type MtcImportBatchItem, type MtcRouteInfo } from '../api';
+
+type ImportState = { status: 'idle' | 'loading' | 'ok' | 'error'; detail?: string; routeId?: number; created?: boolean; stagesImported?: number };
 
 export default function MtcBatchScraper() {
-  const [input, setInput]       = useState('');
-  const [tags, setTags]         = useState<string[]>([]);
-  const [results, setResults]   = useState<MtcBatchItem[]>([]);
-  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [input, setInput]         = useState('');
+  const [tags, setTags]           = useState<string[]>([]);
+  const [results, setResults]     = useState<MtcBatchItem[]>([]);
+  const [progress, setProgress]   = useState<{ done: number; total: number } | null>(null);
+  const [expanded, setExpanded]   = useState<Set<string>>(new Set());
+  const [importMap, setImportMap] = useState<Record<string, ImportState>>({});
+  const [importingAll, setImportingAll] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ── Tag input helpers ──────────────────────────────────────────────────
@@ -50,6 +54,7 @@ export default function MtcBatchScraper() {
 
     setResults([]);
     setExpanded(new Set());
+    setImportMap({});
     setProgress({ done: 0, total: unique.length });
 
     // Fire all requests in parallel but update progress as each resolves
@@ -90,6 +95,53 @@ export default function MtcBatchScraper() {
 
   function expandAll()   { setExpanded(new Set(results.filter(r => r.status === 'ok').map(r => r.routeCode))); }
   function collapseAll() { setExpanded(new Set()); }
+
+  // ── Import helpers ─────────────────────────────────────────────────────
+
+  function applyImportResults(items: MtcImportBatchItem[]) {
+    setImportMap(prev => {
+      const next = { ...prev };
+      for (const item of items) {
+        next[item.routeCode] = item.status === 'ok'
+          ? { status: 'ok', routeId: item.routeId, created: item.created, stagesImported: item.stagesImported }
+          : { status: 'error', detail: item.error };
+      }
+      return next;
+    });
+  }
+
+  async function handleImportOne(routeCode: string) {
+    setImportMap(prev => ({ ...prev, [routeCode]: { status: 'loading' } }));
+    try {
+      const res = await mtcApi.importStagesBatch([routeCode]);
+      applyImportResults(res);
+    } catch {
+      setImportMap(prev => ({ ...prev, [routeCode]: { status: 'error', detail: 'Request failed' } }));
+    }
+  }
+
+  async function handleImportAll() {
+    const okRoutes = results.filter(r => r.status === 'ok').map(r => r.routeCode);
+    if (okRoutes.length === 0) return;
+    setImportingAll(true);
+    setImportMap(prev => {
+      const next = { ...prev };
+      for (const r of okRoutes) next[r] = { status: 'loading' };
+      return next;
+    });
+    try {
+      const res = await mtcApi.importStagesBatch(okRoutes);
+      applyImportResults(res);
+    } catch {
+      setImportMap(prev => {
+        const next = { ...prev };
+        for (const r of okRoutes) if (next[r]?.status === 'loading') next[r] = { status: 'error', detail: 'Request failed' };
+        return next;
+      });
+    } finally {
+      setImportingAll(false);
+    }
+  }
 
   const isLoading = progress !== null && progress.done < progress.total;
   const okCount   = results.filter(r => r.status === 'ok').length;
@@ -156,12 +208,17 @@ export default function MtcBatchScraper() {
 
       {/* Results toolbar */}
       {results.length > 0 && !isLoading && (
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, color: 'var(--text-muted)', flex: 1 }}>
             {okCount} route{okCount !== 1 ? 's' : ''} fetched{errCount > 0 ? `, ${errCount} failed` : ''}
           </span>
           <button type="button" onClick={expandAll} style={toolbarBtn}>Expand all</button>
           <button type="button" onClick={collapseAll} style={toolbarBtn}>Collapse all</button>
+          {okCount > 0 && (
+            <button type="button" onClick={handleImportAll} disabled={importingAll} style={{ ...toolbarBtn, background: 'var(--primary)', color: '#fff', border: 'none', fontWeight: 600, opacity: importingAll ? 0.7 : 1 }}>
+              {importingAll ? 'Importing…' : `Import all ${okCount} to DB`}
+            </button>
+          )}
         </div>
       )}
 
@@ -173,6 +230,8 @@ export default function MtcBatchScraper() {
             item={item}
             expanded={expanded.has(item.routeCode)}
             onToggle={() => toggleExpand(item.routeCode)}
+            importState={importMap[item.routeCode] ?? { status: 'idle' }}
+            onImport={() => handleImportOne(item.routeCode)}
           />
         ))}
       </div>
@@ -182,7 +241,13 @@ export default function MtcBatchScraper() {
 
 // ── Result card ────────────────────────────────────────────────────────────
 
-function ResultCard({ item, expanded, onToggle }: { item: MtcBatchItem; expanded: boolean; onToggle: () => void }) {
+function ResultCard({ item, expanded, onToggle, importState, onImport }: {
+  item: MtcBatchItem;
+  expanded: boolean;
+  onToggle: () => void;
+  importState: ImportState;
+  onImport: () => void;
+}) {
   if (item.status === 'error') {
     return (
       <div style={{ padding: '10px 14px', background: 'var(--error-bg, #fde8e8)', border: '1px solid var(--error-border, #f5c6cb)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -194,20 +259,40 @@ function ResultCard({ item, expanded, onToggle }: { item: MtcBatchItem; expanded
   }
 
   const d: MtcRouteInfo = item.data;
+  const imp = importState;
+
   return (
     <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', background: 'var(--surface)' }}>
-      {/* Header row — always visible */}
-      <button
-        type="button"
-        onClick={onToggle}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text)' }}
-      >
-        <span style={{ fontWeight: 700, fontSize: 14, minWidth: 60 }}>{d.routeCode}</span>
-        <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 4, background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>OK</span>
-        <span style={{ fontSize: 13, color: 'var(--text-muted)', flex: 1 }}>{d.origin} → {d.destination}</span>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.totalStages} stages</span>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 6 }}>{expanded ? '▲' : '▼'}</span>
-      </button>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px' }}>
+        <button
+          type="button"
+          onClick={onToggle}
+          style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text)', padding: 0 }}
+        >
+          <span style={{ fontWeight: 700, fontSize: 14, minWidth: 60 }}>{d.routeCode}</span>
+          <span style={{ fontSize: 12, padding: '2px 8px', borderRadius: 4, background: 'var(--primary)', color: '#fff', fontWeight: 600 }}>OK</span>
+          <span style={{ fontSize: 13, color: 'var(--text-muted)', flex: 1 }}>{d.origin} → {d.destination}</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{d.totalStages} stages</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>{expanded ? '▲' : '▼'}</span>
+        </button>
+
+        {/* Import button / status */}
+        {imp.status === 'idle' && (
+          <button type="button" onClick={onImport} style={{ ...toolbarBtn, whiteSpace: 'nowrap' }}>Import to DB</button>
+        )}
+        {imp.status === 'loading' && (
+          <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Importing…</span>
+        )}
+        {imp.status === 'ok' && (
+          <span style={{ fontSize: 12, color: 'var(--success, #198754)', whiteSpace: 'nowrap', fontWeight: 600 }}>
+            ✓ {imp.created ? 'Created' : 'Updated'} · {imp.stagesImported} stages
+          </span>
+        )}
+        {imp.status === 'error' && (
+          <span style={{ fontSize: 12, color: 'var(--error-text, #721c24)', whiteSpace: 'nowrap' }} title={imp.detail}>✗ Import failed</span>
+        )}
+      </div>
 
       {/* Expanded: summary chips + stage table */}
       {expanded && (

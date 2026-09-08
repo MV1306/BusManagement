@@ -25,6 +25,60 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
             : Ok(result.Data);
     }
 
+    [HttpPost("stages/batch/import")]
+    public async Task<IActionResult> ImportStagesBatch([FromBody] string[] routes)
+    {
+        if (routes is null || routes.Length == 0)
+            return BadRequest(new { message = "routes array is required" });
+
+        var results = new List<object>();
+        foreach (var rawRoute in routes.Where(r => !string.IsNullOrWhiteSpace(r)))
+        {
+            var route = rawRoute.Trim().ToUpperInvariant();
+            var scraped = await ScrapeRoute(route);
+            if (scraped.Error is not null)
+            {
+                results.Add(new { status = "error", routeCode = route, error = scraped.Error });
+                continue;
+            }
+
+            dynamic data = scraped.Data!;
+            // Upsert route
+            var dbRoute = await db.Routes.FirstOrDefaultAsync(r => r.RouteCode == route);
+            bool created = dbRoute is null;
+            if (created)
+            {
+                dbRoute = new Models.Route { RouteCode = route, RouteName = route, CreatedBy = "MtcScraper" };
+                db.Routes.Add(dbRoute);
+                await db.SaveChangesAsync();
+            }
+
+            // Replace stages
+            var existing = await db.RouteStages.Where(s => s.RouteId == dbRoute!.RouteId).ToListAsync();
+            db.RouteStages.RemoveRange(existing);
+            await db.SaveChangesAsync();
+
+            // Re-add from scraped data using reflection-free approach
+            var stagesJson = System.Text.Json.JsonSerializer.Serialize(scraped.Data);
+            var doc = System.Text.Json.JsonDocument.Parse(stagesJson);
+            var stagesArr = doc.RootElement.GetProperty("stages");
+            foreach (var s in stagesArr.EnumerateArray())
+            {
+                db.RouteStages.Add(new RouteStage
+                {
+                    RouteId    = dbRoute!.RouteId,
+                    StageName  = s.GetProperty("name").GetString()!,
+                    StageOrder = s.GetProperty("order").GetInt32(),
+                });
+            }
+            await db.SaveChangesAsync();
+
+            results.Add(new { status = "ok", routeCode = route, routeId = dbRoute!.RouteId, created, stagesImported = stagesArr.GetArrayLength() });
+        }
+
+        return Ok(results);
+    }
+
     [HttpPost("stages/batch")]
     public async Task<IActionResult> GetStagesBatch([FromBody] string[] routes)
     {
