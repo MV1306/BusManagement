@@ -35,48 +35,206 @@ public partial class MtcScraperController(IHttpClientFactory httpFactory, BusMan
         foreach (var rawRoute in routes.Where(r => !string.IsNullOrWhiteSpace(r)))
         {
             var route = rawRoute.Trim().ToUpperInvariant();
-            var scraped = await ScrapeRoute(route);
-            if (scraped.Error is not null)
+            var (dbRoute, stagesImported, routeCreated, stageError) = await UpsertStages(route);
+            if (stageError is not null)
+                results.Add(new { status = "error", routeCode = route, error = stageError });
+            else
+                results.Add(new { status = "ok", routeCode = route, routeId = dbRoute!.RouteId, created = routeCreated, stagesImported });
+        }
+        return Ok(results);
+    }
+
+    [HttpPost("full-import")]
+    public async Task<IActionResult> FullImport([FromBody] string[] routes)
+    {
+        if (routes is null || routes.Length == 0)
+            return BadRequest(new { message = "routes array is required" });
+
+        var results = new List<object>();
+        foreach (var rawRoute in routes.Where(r => !string.IsNullOrWhiteSpace(r)))
+        {
+            var route = rawRoute.Trim().ToUpperInvariant();
+
+            // Step 1: stages
+            var (dbRoute, stagesImported, routeCreated, stageError) = await UpsertStages(route);
+            if (stageError is not null)
             {
-                results.Add(new { status = "error", routeCode = route, error = scraped.Error });
+                results.Add(new { status = "error", routeCode = route, error = stageError });
                 continue;
             }
 
-            dynamic data = scraped.Data!;
-            // Upsert route
-            var dbRoute = await db.Routes.FirstOrDefaultAsync(r => r.RouteCode == route);
-            bool created = dbRoute is null;
-            if (created)
+            // Step 2: stops via Chalo
+            var stopsResult = await ImportStopsForRoute(dbRoute!);
+            if (stopsResult.Error is not null)
             {
-                dbRoute = new Models.Route { RouteCode = route, RouteName = route, CreatedBy = "MtcScraper" };
-                db.Routes.Add(dbRoute);
-                await db.SaveChangesAsync();
-            }
-
-            // Replace stages
-            var existing = await db.RouteStages.Where(s => s.RouteId == dbRoute!.RouteId).ToListAsync();
-            db.RouteStages.RemoveRange(existing);
-            await db.SaveChangesAsync();
-
-            // Re-add from scraped data using reflection-free approach
-            var stagesJson = System.Text.Json.JsonSerializer.Serialize(scraped.Data);
-            var doc = System.Text.Json.JsonDocument.Parse(stagesJson);
-            var stagesArr = doc.RootElement.GetProperty("stages");
-            foreach (var s in stagesArr.EnumerateArray())
-            {
-                db.RouteStages.Add(new RouteStage
+                results.Add(new
                 {
-                    RouteId    = dbRoute!.RouteId,
-                    StageName  = s.GetProperty("name").GetString()!,
-                    StageOrder = s.GetProperty("order").GetInt32(),
+                    status = "partial", routeCode = route, routeId = dbRoute!.RouteId,
+                    routeCreated, stagesImported, stopsError = stopsResult.Error
                 });
+                continue;
             }
-            await db.SaveChangesAsync();
 
-            results.Add(new { status = "ok", routeCode = route, routeId = dbRoute!.RouteId, created, stagesImported = stagesArr.GetArrayLength() });
+            results.Add(new
+            {
+                status = "ok", routeCode = route, routeId = dbRoute!.RouteId,
+                routeCreated, stagesImported,
+                totalStops   = stopsResult.TotalStops,
+                stopsCreated = stopsResult.StopsCreated,
+                stopsMatched = stopsResult.StopsMatched,
+            });
+        }
+        return Ok(results);
+    }
+
+    // ── Shared helpers ────────────────────────────────────────────────────
+
+    private async Task<(Models.Route? Route, int StagesImported, bool Created, string? Error)> UpsertStages(string route)
+    {
+        var scraped = await ScrapeRoute(route);
+        if (scraped.Error is not null) return (null, 0, false, scraped.Error);
+
+        var dbRoute = await db.Routes.FirstOrDefaultAsync(r => r.RouteCode == route);
+        bool created = dbRoute is null;
+        if (created)
+        {
+            dbRoute = new Models.Route { RouteCode = route, RouteName = route, CreatedBy = "MtcScraper" };
+            db.Routes.Add(dbRoute);
+            await db.SaveChangesAsync();
         }
 
-        return Ok(results);
+        var existing = await db.RouteStages.Where(s => s.RouteId == dbRoute!.RouteId).ToListAsync();
+        db.RouteStages.RemoveRange(existing);
+        await db.SaveChangesAsync();
+
+        var stagesJson = JsonSerializer.Serialize(scraped.Data);
+        var doc        = JsonDocument.Parse(stagesJson);
+        var stagesArr  = doc.RootElement.GetProperty("stages");
+        foreach (var s in stagesArr.EnumerateArray())
+        {
+            db.RouteStages.Add(new RouteStage
+            {
+                RouteId    = dbRoute!.RouteId,
+                StageName  = s.GetProperty("name").GetString()!,
+                StageOrder = s.GetProperty("order").GetInt32(),
+            });
+        }
+        await db.SaveChangesAsync();
+        return (dbRoute, stagesArr.GetArrayLength(), created, null);
+    }
+
+    private record StopsImportResult(int TotalStops, int StopsCreated, int StopsMatched, string? Error)
+    {
+        public static StopsImportResult Fail(string error) => new(0, 0, 0, error);
+    }
+
+    private async Task<StopsImportResult> ImportStopsForRoute(Models.Route route)
+    {
+        var stages = await db.RouteStages
+            .Where(s => s.RouteId == route.RouteId)
+            .OrderBy(s => s.StageOrder)
+            .ToListAsync();
+        if (stages.Count == 0) return StopsImportResult.Fail("No stages found — stage import may have failed.");
+
+        var client = httpFactory.CreateClient("MtcScraper");
+        var day    = DateTime.UtcNow.DayOfWeek.ToString().ToLower();
+
+        HttpResponseMessage searchRes;
+        try { searchRes = await client.GetAsync($"https://chalo.com/app/api/scheduler_v4/v4/chennai/search?str={Uri.EscapeDataString(route.RouteCode)}&day={day}"); }
+        catch (Exception ex) { return StopsImportResult.Fail($"Chalo search failed: {ex.Message}"); }
+        if (!searchRes.IsSuccessStatusCode) return StopsImportResult.Fail($"Chalo search returned {searchRes.StatusCode}");
+
+        var searchResult = JsonSerializer.Deserialize<ChaloSearchResult>(await searchRes.Content.ReadAsStringAsync(), JsonOpts);
+        if (searchResult?.Routes is null || searchResult.Routes.Count == 0)
+            return StopsImportResult.Fail($"Route '{route.RouteCode}' not found on Chalo.");
+
+        var firstStageName = stages.First().StageName;
+        var lastStageName  = stages.Last().StageName;
+
+        var exactMatches = searchResult.Routes
+            .Where(r => string.Equals(r.RouteName, route.RouteCode, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (exactMatches.Count == 0)
+            return StopsImportResult.Fail($"No exact match for '{route.RouteCode}' on Chalo.");
+
+        var scored = exactMatches.Select(r => new
+        {
+            Route         = r,
+            TowardsDest   = NameSimilarity(r.DirectionStopName, lastStageName),
+            TowardsOrigin = NameSimilarity(r.DirectionStopName, firstStageName),
+            ForwardScore  = NameSimilarity(r.FirstStopName, firstStageName) + NameSimilarity(r.LastStopName, lastStageName),
+            ReverseScore  = NameSimilarity(r.FirstStopName, lastStageName)  + NameSimilarity(r.LastStopName, firstStageName),
+        }).ToList();
+
+        var best      = scored.OrderByDescending(x => x.TowardsDest).ThenByDescending(x => x.ForwardScore).First();
+        bool needsFlip = best.TowardsOrigin > best.TowardsDest && best.TowardsOrigin > 0;
+        if (best.TowardsDest == 0 && best.TowardsOrigin == 0) needsFlip = best.ReverseScore > best.ForwardScore;
+        if (needsFlip) stages = [.. stages.OrderByDescending(s => s.StageOrder)];
+
+        HttpResponseMessage detailRes;
+        try { detailRes = await client.GetAsync($"https://chalo.com/app/api/scheduler_v4/v4/chennai/routedetailslive?route_id={best.Route.RouteId}&day={day}"); }
+        catch (Exception ex) { return StopsImportResult.Fail($"Chalo detail fetch failed: {ex.Message}"); }
+
+        var detail     = JsonSerializer.Deserialize<ChaloRouteDetail>(await detailRes.Content.ReadAsStringAsync(), JsonOpts);
+        var chaloStops = detail?.Route?.StopSequence;
+        if (chaloStops is null || chaloStops.Count == 0) return StopsImportResult.Fail("No stops in Chalo response.");
+
+        chaloStops = chaloStops
+            .GroupBy(s => string.IsNullOrEmpty(s.StopCode) ? $"{s.Lat:F4},{s.Lon:F4}" : s.StopCode)
+            .Select(g => g.First())
+            .GroupBy(s => $"{s.Lat:F4},{s.Lon:F4}")
+            .Select(g => g.First())
+            .ToList();
+
+        int forwardFit = NameSimilarity(chaloStops.First().StopName, stages.First().StageName) + NameSimilarity(chaloStops.Last().StopName, stages.Last().StageName);
+        int reverseFit = NameSimilarity(chaloStops.First().StopName, stages.Last().StageName)  + NameSimilarity(chaloStops.Last().StopName, stages.First().StageName);
+        if (reverseFit > forwardFit) chaloStops = [.. chaloStops.AsEnumerable().Reverse()];
+
+        var existingStops = await db.Stops.ToListAsync();
+        var existingCodes = existingStops.Select(s => s.StopCode).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        int codeCounter   = await db.Stops.MaxAsync(s => (int?)s.StopId) ?? 0;
+
+        var existingRouteStops = await db.RouteStops.Where(rs => rs.RouteId == route.RouteId).ToListAsync();
+        db.RouteStops.RemoveRange(existingRouteStops);
+        await db.SaveChangesAsync();
+
+        int created = 0, matched = 0;
+        var routeStops  = new List<RouteStop>();
+        var usedStopIds = new HashSet<int>();
+
+        for (int i = 0; i < chaloStops.Count; i++)
+        {
+            var cs       = chaloStops[i];
+            var existing = FindExistingStop(existingStops, cs.StopName, cs.Lat, cs.Lon, usedStopIds);
+            Stop stop;
+            if (existing is not null)
+            {
+                if (existing.Latitude is null && cs.Lat != 0) { existing.Latitude = cs.Lat; existing.Longitude = cs.Lon; }
+                stop = existing;
+                usedStopIds.Add(existing.StopId);
+                matched++;
+            }
+            else
+            {
+                string code;
+                do { code = GenerateStopCode(cs.StopName, ++codeCounter); } while (existingCodes.Contains(code));
+                existingCodes.Add(code);
+                stop = new Stop { StopCode = code, StopName = cs.StopName.Trim().ToUpperInvariant(), Latitude = cs.Lat != 0 ? cs.Lat : null, Longitude = cs.Lon != 0 ? cs.Lon : null, CreatedBy = "ChaloImport" };
+                db.Stops.Add(stop);
+                existingStops.Add(stop);
+                created++;
+            }
+
+            double ratio      = stages.Count == 1 ? 0 : (double)i / (chaloStops.Count - 1);
+            int    stageIndex = Math.Clamp((int)Math.Round(ratio * (stages.Count - 1)), 0, stages.Count - 1);
+            double dist       = i > 0 ? Math.Round(Haversine(chaloStops[i - 1].Lat, chaloStops[i - 1].Lon, cs.Lat, cs.Lon), 2) : 0;
+
+            routeStops.Add(new RouteStop { RouteId = route.RouteId, Stop = stop, RouteStageId = stages[stageIndex].RouteStageId, StopOrder = i + 1, DistanceFromPreviousKm = dist });
+        }
+
+        db.RouteStops.AddRange(routeStops);
+        await db.SaveChangesAsync();
+        return new StopsImportResult(chaloStops.Count, created, matched, null);
     }
 
     [HttpPost("stages/batch")]
