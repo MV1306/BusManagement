@@ -73,3 +73,26 @@ export const faresApi = {
 export const routeBusTypesApi = {
   getByRoute: (routeId: number) => req<RouteBusType[]>(`/routes/${routeId}/bus-types`),
 };
+
+export interface CoverageStop {
+  stopOrder: number; stopName: string; stopCode: string;
+  latitude: number; longitude: number; isFirstStop: boolean; isLastStop: boolean;
+}
+export interface CoverageRoute {
+  routeId: number; routeCode: string; routeName: string; isActive: boolean;
+  stops: CoverageStop[];
+}
+export interface RouteStage {
+  routeStageId: number; stageName: string; stageOrder: number;
+  distanceFromPreviousKm?: number | null; isFirstStage: boolean; isLastStage: boolean;
+}
+
+export const coverageApi = {
+  getAll: () => req<CoverageRoute[]>('/routes/coverage'),
+};
+export const routeDetailApi = {
+  getAll: (page = 1, pageSize = 50, search = '') =>
+    req<PagedResult<Route>>(`/routes?page=${page}&pageSize=${pageSize}${search ? `&search=${encodeURIComponent(search)}` : ''}`),
+  getStages: (routeId: number) => req<RouteStage[]>(`/routes/${routeId}/stages`),
+  getStops: (routeId: number) => req<RouteStop[]>(`/routes/${routeId}/stops`),
+};

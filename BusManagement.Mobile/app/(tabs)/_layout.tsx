@@ -24,6 +24,22 @@ export default function TabsLayout() {
         name="journey"
         options={{
           title: 'Journey Planner',
+          tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="routes"
+        options={{
+          title: 'Routes',
+          tabBarIcon: ({ color, size }) => <Ionicons name="bus" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: 'Coverage Map',
+          tabBarLabel: 'Map',
+          headerShown: false,
           tabBarIcon: ({ color, size }) => <Ionicons name="map" size={size} color={color} />,
         }}
       />
