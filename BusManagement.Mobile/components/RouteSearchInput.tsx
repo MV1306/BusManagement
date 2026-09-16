@@ -1,20 +1,19 @@
 import React, { useState, useCallback, useRef } from 'react';
 import {
   View, TextInput, Modal, Text, TouchableOpacity, FlatList,
-  StyleSheet, ActivityIndicator, TouchableWithoutFeedback, UIManager, findNodeHandle,
+  StyleSheet, ActivityIndicator, TouchableWithoutFeedback,
 } from 'react-native';
-import { Stop, stopsApi } from '../api';
+import { Route, routesApi } from '../api';
 
 interface Props {
   label: string;
-  value: Stop | null;
-  onSelect: (stop: Stop) => void;
-  overrideList?: Stop[]; // when provided, shows this list instead of searching API
+  value: Route | null;
+  onSelect: (route: Route) => void;
 }
 
-export default function StopSearchInput({ label, value, onSelect, overrideList }: Props) {
+export default function RouteSearchInput({ label, value, onSelect }: Props) {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Stop[]>([]);
+  const [results, setResults] = useState<Route[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [dropdownY, setDropdownY] = useState(0);
@@ -24,40 +23,25 @@ export default function StopSearchInput({ label, value, onSelect, overrideList }
 
   const search = useCallback(async (text: string) => {
     setQuery(text);
-    if (overrideList) {
-      // filter the override list locally
-      const filtered = text.length < 1
-        ? overrideList
-        : overrideList.filter(s => s.stopName.toLowerCase().includes(text.toLowerCase()) || s.stopCode?.toLowerCase().includes(text.toLowerCase()));
-      setResults(filtered);
-      return;
-    }
-    if (text.length < 2) { setResults([]); return; }
+    if (text.length < 1) { setResults([]); return; }
     setLoading(true);
     try {
-      const data = await stopsApi.search(text);
+      const data = await routesApi.searchAll(text);
       setResults(data.items);
     } catch { setResults([]); }
     finally { setLoading(false); }
-  }, [overrideList]);
+  }, []);
 
   const openDropdown = () => {
     inputRef.current?.measure((_fx, _fy, w, h, px, py) => {
-      setDropdownX(px);
-      setDropdownY(py + h);
-      setDropdownW(w);
+      setDropdownX(px); setDropdownY(py + h); setDropdownW(w);
     });
-    setQuery(value?.stopName ?? '');
-    // pre-populate with override list
-    if (overrideList) setResults(overrideList);
+    setQuery(value ? `${value.routeCode} — ${value.routeName}` : '');
     setOpen(true);
   };
 
-  const select = (stop: Stop) => {
-    onSelect(stop);
-    setResults([]);
-    setOpen(false);
-    setQuery('');
+  const select = (route: Route) => {
+    onSelect(route); setResults([]); setOpen(false); setQuery('');
   };
 
   return (
@@ -68,8 +52,8 @@ export default function StopSearchInput({ label, value, onSelect, overrideList }
           <View pointerEvents="none">
             <TextInput
               style={styles.input}
-              value={value?.stopName ?? ''}
-              placeholder={`Search ${label.toLowerCase()}...`}
+              value={value ? `${value.routeCode} — ${value.routeName}` : ''}
+              placeholder="Search route..."
               placeholderTextColor="#9ca3af"
               editable={false}
             />
@@ -87,7 +71,7 @@ export default function StopSearchInput({ label, value, onSelect, overrideList }
                     style={styles.modalInput}
                     value={query}
                     onChangeText={search}
-                    placeholder={`Search ${label.toLowerCase()}...`}
+                    placeholder="Search route..."
                     placeholderTextColor="#9ca3af"
                     autoFocus
                   />
@@ -95,18 +79,18 @@ export default function StopSearchInput({ label, value, onSelect, overrideList }
                 </View>
                 <FlatList
                   data={results}
-                  keyExtractor={i => String(i.stopId)}
+                  keyExtractor={i => String(i.routeId)}
                   keyboardShouldPersistTaps="handled"
                   style={styles.list}
                   renderItem={({ item }) => (
                     <TouchableOpacity style={styles.item} onPress={() => select(item)}>
-                      <Text style={styles.itemText}>{item.stopName}</Text>
-                      {item.stopCode ? <Text style={styles.itemCode}>{item.stopCode}</Text> : null}
+                      <Text style={styles.itemCode}>{item.routeCode}</Text>
+                      <Text style={styles.itemText}>{item.routeName}</Text>
                     </TouchableOpacity>
                   )}
                   ListEmptyComponent={
-                    query.length >= 2 && !loading
-                      ? <Text style={styles.empty}>No stops found</Text>
+                    query.length >= 1 && !loading
+                      ? <Text style={styles.empty}>No routes found</Text>
                       : null
                   }
                 />
@@ -127,23 +111,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: '#111827', backgroundColor: '#fff',
   },
   modalContent: {
-    position: 'absolute',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    maxHeight: 280,
+    position: 'absolute', backgroundColor: '#fff', borderRadius: 10, maxHeight: 280,
     shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 10, elevation: 10,
     borderWidth: 1, borderColor: '#e5e7eb',
   },
-  searchRow: {
-    flexDirection: 'row', alignItems: 'center',
-    borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
-  },
-  modalInput: {
-    flex: 1, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: '#111827',
-  },
+  searchRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  modalInput: { flex: 1, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: '#111827' },
   list: { maxHeight: 220 },
   item: { paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
-  itemText: { fontSize: 14, color: '#111827' },
-  itemCode: { fontSize: 11, color: '#6b7280', marginTop: 1 },
+  itemCode: { fontSize: 12, fontWeight: '700', color: '#1a56db' },
+  itemText: { fontSize: 13, color: '#374151', marginTop: 1 },
   empty: { padding: 14, color: '#9ca3af', textAlign: 'center' },
 });
