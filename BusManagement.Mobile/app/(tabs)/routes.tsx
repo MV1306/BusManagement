@@ -62,12 +62,19 @@ export default function RoutesScreen() {
     finally { setDetailLoading(false); }
   };
 
-  const stopsWithCoords = stops.filter(s => s.latitude && s.longitude);
-  const mapRegion = stopsWithCoords.length > 0 ? {
-    latitude: stopsWithCoords.reduce((s, p) => s + p.latitude!, 0) / stopsWithCoords.length,
-    longitude: stopsWithCoords.reduce((s, p) => s + p.longitude!, 0) / stopsWithCoords.length,
-    latitudeDelta: 0.15, longitudeDelta: 0.15,
-  } : undefined;
+  const stopsWithCoords = stops.filter(s => s.latitude && s.longitude && s.latitude !== 0 && s.longitude !== 0);
+  const mapRegion = stopsWithCoords.length > 1 ? (() => {
+    const lats = stopsWithCoords.map(s => s.latitude!);
+    const lngs = stopsWithCoords.map(s => s.longitude!);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    return {
+      latitude: (minLat + maxLat) / 2,
+      longitude: (minLng + maxLng) / 2,
+      latitudeDelta: Math.max((maxLat - minLat) * 1.4, 0.01),
+      longitudeDelta: Math.max((maxLng - minLng) * 1.4, 0.01),
+    };
+  })() : undefined;
 
   const totalDist = stops.reduce((s, r) => s + (r.distanceFromPreviousKm ?? 0), 0);
 
@@ -165,8 +172,13 @@ export default function RoutesScreen() {
 
           {/* Map */}
           {detailTab === 'map' && (
-            stopsWithCoords.length === 0
-              ? <Text style={styles.empty}>No coordinates available for this route.</Text>
+            stopsWithCoords.length < 2
+              ? <View style={styles.center}>
+                  <Text style={styles.empty}>No coordinate data for this route.</Text>
+                  <Text style={[styles.empty, { fontSize: 11, marginTop: 4 }]}>
+                    {stops.length} stops loaded, {stopsWithCoords.length} have coordinates.
+                  </Text>
+                </View>
               : <MapView style={styles.map} initialRegion={mapRegion}>
                   <Polyline
                     coordinates={stopsWithCoords.map(s => ({ latitude: s.latitude!, longitude: s.longitude! }))}
@@ -293,7 +305,8 @@ const styles = StyleSheet.create({
   stopDist: { fontSize: 11, color: '#6b7280' },
   // Map
   map: { flex: 1 },
-  empty: { textAlign: 'center', color: '#9ca3af', marginTop: 40 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  empty: { textAlign: 'center', color: '#9ca3af', fontSize: 14 },
   // Badges
   badgeGreen: { backgroundColor: '#dcfce7', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
   badgeBlue: { backgroundColor: '#dbeafe', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
