@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "TransitOps",
+    "slug": "transitops-mobile",
+    "version": "1.0.0",
+    "scheme": "transitops",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.transitops.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Used to find nearby bus stops.",
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
+    },
+    "android": {
+      "package": "com.transitops.mobile",
+      "permissions": ["ACCESS_FINE_LOCATION"]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        { "locationWhenInUsePermission": "Used to find nearby bus stops." }
+      ]
+    ]
+  }
+}

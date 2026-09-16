@@ -20,6 +20,13 @@ dist-ssr/
 *.local
 
 # ========================
+# React Native / Expo Mobile
+# ========================
+BusManagement.Mobile/.expo/
+BusManagement.Mobile/android/
+BusManagement.Mobile/ios/
+
+# ========================
 # Logs
 # ========================
 logs/

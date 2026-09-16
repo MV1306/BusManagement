@@ -119,7 +119,6 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseSerilogRequestLogging();
-app.UseHttpsRedirection();
 app.UseCors("AllowUI");
 app.UseAuthentication();
 app.UseAuthorization();
