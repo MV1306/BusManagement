@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert,
+  View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -15,8 +15,35 @@ export default function NearbyScreen() {
     setLoading(true);
     setStops([]);
     try {
+      // Check current permission status first
+      const { status: existing } = await Location.getForegroundPermissionsAsync();
+
+      if (existing === 'denied') {
+        // Already denied — can't re-prompt, must go to Settings
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location access for this app in your iPhone Settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
+
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { Alert.alert('Location permission denied'); return; }
+      if (status !== 'granted') {
+        Alert.alert(
+          'Location Permission Required',
+          'Please enable location access in Settings to find nearby stops.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+        return;
+      }
+
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const data = await stopsApi.getNearby(loc.coords.latitude, loc.coords.longitude, r);
       setStops(data);
