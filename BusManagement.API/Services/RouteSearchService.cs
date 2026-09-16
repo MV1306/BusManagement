@@ -30,6 +30,7 @@ public class RouteSearchService(BusManagementDbContext db)
                 }).ToList(),
                 BusTypes = r.RouteBusTypes.Select(bt => bt.BusType.ToString()).ToList(),
                 StageFirstOrders = r.RouteStages
+                    .Where(st => st.RouteStops.Any())
                     .Select(st => st.RouteStops.Min(rs => rs.StopOrder))
                     .ToList()
             })
